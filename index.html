@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#06131b">
+<meta name="description" content="ASWIK AI — a mobile-ready assistant interface by Aswik Singh">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>ASWIK AI</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand-mark" aria-hidden="true"><span></span></div>
+    <div class="brand-copy"><div class="eyebrow">PERSONAL AI SYSTEM</div><h1>ASWIK <span>AI</span></h1></div>
+    <button id="aboutBtn" class="icon-btn" aria-label="About developer" title="About developer">ⓘ</button>
+  </header>
+  <main>
+    <section class="reactor-card">
+      <div class="reactor-ring ring-a"></div><div class="reactor-ring ring-b"></div><div class="reactor-ring ring-c"></div>
+      <div class="reactor-core"><div class="core-inner"></div></div>
+      <div class="reactor-caption"><span class="live-dot"></span> SYSTEM ONLINE <span id="clock">--:--</span></div>
+    </section>
+    <section class="welcome">
+      <p class="eyebrow">YOUR ASSISTANT</p>
+      <h2>Ready when<br><span>you are.</span></h2>
+      <p class="subcopy">A mobile-ready ASWIK AI interface. Search the web, check the time, and keep your chat history on this device.</p>
+    </section>
+    <section id="chat" class="chat" aria-live="polite">
+      <div class="message assistant"><div class="avatar">A</div><div class="bubble"><strong>ASWIK AI</strong><p>Hi! I'm the ASWIK AI mobile starter. Live web search is available. A real on-device language model is not bundled in this starter yet, so I won't pretend that a demo reply is AI-generated.</p><p class="hint">Try “Which festival is today in India?” using Web Search.</p></div></div>
+    </section>
+    <section class="search-panel">
+      <div class="panel-title"><span class="search-glyph">⌕</span><div><strong>Live web search</strong><small>Opens current web results in your browser</small></div></div>
+      <form id="searchForm" class="search-form">
+        <input id="searchInput" type="search" placeholder="Search current news or festivals…" autocomplete="off">
+        <button type="submit" class="primary-btn">Search</button>
+      </form>
+      <div class="quick-searches">
+        <button data-query="Which festival is today in India?">Today's festival in India</button>
+        <button data-query="Latest news in India today">Latest India news</button>
+      </div>
+    </section>
+    <section class="composer-panel">
+      <label for="messageInput">CHAT</label>
+      <div class="composer">
+        <textarea id="messageInput" rows="1" placeholder="Type a message…"></textarea>
+        <button id="sendBtn" class="send-btn" aria-label="Send message">↑</button>
+      </div>
+      <p class="disclaimer">This starter does not yet include an AI model. Use web search for current information.</p>
+    </section>
+  </main>
+  <footer>ASWIK AI <span>•</span> DEVELOPED BY ASWIK SINGH</footer>
+</div>
+<dialog id="aboutDialog">
+  <div class="dialog-head"><div class="brand-mark small"><span></span></div><button id="closeAbout" class="icon-btn" aria-label="Close">✕</button></div>
+  <p class="eyebrow">ABOUT THE DEVELOPER</p><h2>Aswik Singh</h2>
+  <p>Creator and developer of ASWIK AI.</p>
+  <p class="subcopy">This is a mobile web starter for the ASWIK AI project. The local AI engine can be integrated in a later build.</p>
+</dialog>
+<script src="app.js"></script>
+</body>
+</html>
