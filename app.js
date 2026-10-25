@@ -32,10 +32,13 @@ const conversation = [{
 // =============================================
 
 function instantBrain(input) {
+ 
   const q = input.trim().toLowerCase()
+    .replace(/\bthedate\b/g, 'the date')
     .replace(/[?!.,]+$/g, '')
     .replace(/\s+/g, ' ')
     .trim();
+
 
   // Greetings, including "hello from my PC"
   if (
