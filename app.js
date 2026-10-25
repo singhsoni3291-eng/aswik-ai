@@ -1,8 +1,16 @@
 
+'use strict';
+
+// =============================================
+// ASWIK AI — BRAIN LITE
+// Developer: Aswik Singh
+// =============================================
+
 const chat = document.getElementById('chat');
 const searchForm = document.getElementById('searchForm');
 const searchInput = document.getElementById('searchInput');
 const messageInput = document.getElementById('messageInput');
+const sendBtn = document.getElementById('sendBtn');
 
 const MODEL_ID = 'Llama-3.2-1B-Instruct-q4f16_1-MLC';
 
@@ -13,88 +21,79 @@ let busy = false;
 const conversation = [{
   role: 'system',
   content:
-    'You are ASWIK AI, a helpful personal assistant created by Aswik Singh. ' +
-    'Be friendly, accurate, and clear. Never invent live information. ' +
-    'Admit uncertainty when you do not know an answer.'
+    'You are ASWIK AI, created by Aswik Singh. ' +
+    'Be friendly, accurate, helpful, and clear. ' +
+    'Do not invent facts or claim to have retrieved live information ' +
+    'unless it has actually been retrieved.'
 }];
 
-// -----------------------------------------
-// ASWIK BRAIN LITE — INSTANT BRAIN
-// -----------------------------------------
+// =============================================
+// 1. INSTANT BRAIN
+// =============================================
 
 function instantBrain(input) {
   const q = input.trim().toLowerCase()
     .replace(/[?!.,]+$/g, '')
+    .replace(/\s+/g, ' ')
     .trim();
 
-  // Greetings
-  if (/^(hi|hello|hey|hii+|heyy+|namaste|good morning|good afternoon|good evening)( there)?$/.test(q)) {
+  // Greetings, including "hello from my PC"
+  if (
+    /^(hi|hello|hey|hii+|heyy+|namaste|good morning|good afternoon|good evening)(\s+(there|from my pc|from my phone))?$/.test(q)
+  ) {
     return 'Hello! ⚡ I am ASWIK AI, ready to help. What shall we do today?';
   }
 
   // Developer identity
   if (
-    /\b(who (made|created|developed|built) you|who is your (creator|developer)|who made aswik ai|who created aswik ai)\b/.test(q)
+    /\b(who (made|created|developed|built) (you|aswik ai)|who is your (creator|developer)|who made aswik ai|who created aswik ai)\b/.test(q)
   ) {
     return 'I was created and developed by Aswik Singh. ⚡ Welcome to ASWIK AI!';
   }
 
+  // Identity
   if (
     /^(who are you|what are you|introduce yourself|tell me about yourself)$/.test(q)
   ) {
-    return 'I am ASWIK AI, a personal assistant created by Aswik Singh. My Brain Lite system handles quick commands, with a compact language model available when your device supports it.';
-  }
-
-  // Date — recognize different ways of asking
-  if (
-    /\b(date|day)\b/.test(q) ||
-    /\b(today|today's|current date|what day is it)\b/.test(q)
-  ) {
-    const asksDate =
-      /\b(date|day|today|today's|current date)\b/.test(q) &&
-      /\b(what|today|date|day|is|tell|current)\b/.test(q);
-
-    if (asksDate) {
-      return 'Today is ' + new Date().toLocaleDateString('en-IN', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      }) + '. ⚡';
-    }
+    return 'I am ASWIK AI, a personal assistant created by Aswik Singh. My Brain Lite system answers quick questions and can retrieve free online reference information.';
   }
 
   // Capabilities
-  if (/^(what can you do|help|your features|what are your features)$/.test(q)) {
-    return 'I can answer quick questions, tell you the date and time, calculate simple arithmetic, and open web search results. When a compatible AI model is available, I can also handle more open-ended conversations.';
+  if (
+    /^(what can you do|help|your features|what are your features)$/.test(q)
+  ) {
+    return 'I can answer quick questions, tell you the date and time, calculate simple arithmetic, search online reference information, and open Google search results. A compact AI model may also work on compatible devices.';
   }
 
   // Current date
   if (
-    /\b(what is the date|what's the date|todays date|today's date|current date|what day is it)\b/.test(q)
+    /\b(date|day)\b/.test(q) &&
+    /\b(what|today|date|day|is|tell|current|the)\b/.test(q) ||
+    /\b(today's date|todays date|current date|what day is it)\b/.test(q)
   ) {
-    return 'Today is ' + new Date().toLocaleDateString(undefined, {
+    return 'Today is ' + new Date().toLocaleDateString('en-IN', {
       weekday: 'long',
-      year: 'numeric',
+      day: 'numeric',
       month: 'long',
-      day: 'numeric'
-    }) + '.';
+      year: 'numeric'
+    }) + '. ⚡';
   }
 
   // Current time
   if (
-    /\b(what time is it|current time|tell me the time|what is the time|what's the time)\b/.test(q)
+    /\b(what time is it|current time|tell me the time|what is the time|what's the time|time right now)\b/.test(q)
   ) {
-    return 'The current local time is ' + new Date().toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    }) + '.';
+    return 'The current local time is ' +
+      new Date().toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }) + '. ⚡';
   }
 
-  // Simple arithmetic: 12 + 5, 8 / 2, etc.
+  // Simple arithmetic: 12 + 5, 8 / 2, calculate 6 * 7
   const mathText = q.match(
-    /^(?:(?:what is|calculate|solve)\s+)?(-?\d+(?:\.\d+)?)\s*([+\-*/×÷])\s*(-?\d+(?:\.\d+)?)\s*\??$/
+    /^(?:(?:what is|calculate|solve)\s+)?(-?\d+(?:\.\d+)?)\s*([+\-*/×÷])\s*(-?\d+(?:\.\d+)?)$/
   );
 
   if (mathText) {
@@ -104,31 +103,30 @@ function instantBrain(input) {
     let result;
 
     if (op === '+') result = a + b;
-    if (op === '-') result = a - b;
-    if (op === '* ' || op === '×' || op === '*') result = a * b;
-
-    if (op === '/' || op === '÷') {
+    else if (op === '-') result = a - b;
+    else if (op === '*' || op === '×') result = a * b;
+    else if (op === '/' || op === '÷') {
       if (b === 0) return 'Division by zero is undefined.';
       result = a / b;
     }
 
     if (Number.isFinite(result)) {
-      return 'The answer is ' + Number(result.toPrecision(12)) + '.';
+      return 'The answer is ' + Number(result.toPrecision(12)) + '. ⚡';
     }
   }
 
-  // A friendly response to thanks
+  // Thanks
   if (/^(thanks|thank you|thx|thank you so much)$/.test(q)) {
     return 'You are welcome! ⚡ I am always ready to help.';
   }
 
-  // Return null when this brain cannot answer confidently.
+  // Unknown question: let the next brain layer handle it.
   return null;
 }
 
-// -----------------------------------------
-// CLOCK
-// -----------------------------------------
+// =============================================
+// 2. LIVE CLOCK
+// =============================================
 
 function updateClock() {
   const clock = document.getElementById('clock');
@@ -143,9 +141,9 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 15000);
 
-// -----------------------------------------
-// CHAT DISPLAY
-// -----------------------------------------
+// =============================================
+// 3. CHAT DISPLAY
+// =============================================
 
 function addMessage(text, who = 'user') {
   const row = document.createElement('div');
@@ -166,19 +164,21 @@ function addMessage(text, who = 'user') {
 
   bubble.append(title, p);
   row.append(avatar, bubble);
-  chat.append(row);
 
-  row.scrollIntoView({
-    behavior: 'smooth',
-    block: 'nearest'
-  });
+  if (chat) {
+    chat.append(row);
+    row.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest'
+    });
+  }
 
   return p;
 }
 
-// -----------------------------------------
-// WEB SEARCH
-// -----------------------------------------
+// =============================================
+// 4. GOOGLE WEB SEARCH
+// =============================================
 
 function searchWeb(query) {
   const q = query.trim();
@@ -187,7 +187,8 @@ function searchWeb(query) {
   addMessage(q, 'user');
 
   addMessage(
-    'Opening Google results for your question. Check the search results for current information.',
+    'Opening Google results for your question. ' +
+    'Check the results for current information.',
     'assistant'
   );
 
@@ -197,29 +198,104 @@ function searchWeb(query) {
     'noopener'
   );
 
-  searchInput.value = '';
+  if (searchInput) searchInput.value = '';
 }
 
-searchForm.addEventListener('submit', event => {
-  event.preventDefault();
-  searchWeb(searchInput.value);
-});
+if (searchForm) {
+  searchForm.addEventListener('submit', event => {
+    event.preventDefault();
+    searchWeb(searchInput ? searchInput.value : '');
+  });
+}
 
 document.querySelectorAll('[data-query]').forEach(button => {
   button.addEventListener('click', () => {
-    searchWeb(button.dataset.query);
+    searchWeb(button.dataset.query || '');
   });
 });
 
-// -----------------------------------------
-// COMPACT AI MODEL — OPTIONAL
-// -----------------------------------------
+// =============================================
+// 5. FREE ONLINE KNOWLEDGE — WIKIPEDIA
+// =============================================
+
+async function getOnlineKnowledge(question) {
+  try {
+    const searchTerm = question
+      .trim()
+      .replace(
+        /^(what is|what are|who is|who was|explain|define|tell me about|can you explain)\s+/i,
+        ''
+      )
+      .replace(/[?!.,]+$/g, '')
+      .trim();
+
+    if (!searchTerm) return null;
+
+    // Search for a relevant Wikipedia article.
+    const searchUrl =
+      'https://en.wikipedia.org/w/rest.php/v1/search/page?q=' +
+      encodeURIComponent(searchTerm) +
+      '&limit=3';
+
+    const searchResponse = await fetch(searchUrl);
+
+    if (!searchResponse.ok) {
+      throw new Error('Wikipedia search unavailable');
+    }
+
+    const searchData = await searchResponse.json();
+    const pages = searchData.pages || [];
+
+    if (pages.length === 0) return null;
+
+    // Try the best search result first, then alternatives.
+    for (const page of pages) {
+      const title = page.key || page.title;
+
+      const summaryUrl =
+        'https://en.wikipedia.org/api/rest_v1/page/summary/' +
+        encodeURIComponent(title.replace(/ /g, '_'));
+
+      const summaryResponse = await fetch(summaryUrl);
+
+      if (!summaryResponse.ok) continue;
+
+      const article = await summaryResponse.json();
+
+      if (
+        !article.extract ||
+        article.type === 'disambiguation' ||
+        article.type === 'not_found'
+      ) {
+        continue;
+      }
+
+      const source =
+        article.content_urls?.desktop?.page ||
+        'https://en.wikipedia.org/wiki/' +
+        encodeURIComponent(title.replace(/ /g, '_'));
+
+      return article.extract +
+        '\n\nSource: Wikipedia — ' + article.title +
+        '\n' + source;
+    }
+
+    return null;
+  } catch (error) {
+    console.warn('ASWIK online knowledge error:', error);
+    return null;
+  }
+}
+
+// =============================================
+// 6. OPTIONAL COMPACT AI MODEL
+// =============================================
 
 async function getEngine(status) {
   if (engine) return engine;
 
   if (!navigator.gpu) {
-    throw new Error('NO_WEBGPU');
+    throw new Error('WebGPU is unavailable');
   }
 
   if (!enginePromise) {
@@ -248,12 +324,12 @@ async function getEngine(status) {
   return enginePromise;
 }
 
-// -----------------------------------------
-// MAIN BRAIN ROUTER
-// -----------------------------------------
+// =============================================
+// 7. MAIN BRAIN ROUTER
+// =============================================
 
 async function sendMessage() {
-  const value = messageInput.value.trim();
+  const value = messageInput ? messageInput.value.trim() : '';
 
   if (!value || busy) return;
 
@@ -261,10 +337,13 @@ async function sendMessage() {
   messageInput.value = '';
   busy = true;
 
-  const status = addMessage('ASWIK Brain Lite is checking...', 'assistant');
+  const status = addMessage(
+    'ASWIK Brain Lite is checking...',
+    'assistant'
+  );
 
   try {
-    // Layer 1: answer immediately without a GPU or model.
+    // Layer 1: instant answers.
     const instantAnswer = instantBrain(value);
 
     if (instantAnswer !== null) {
@@ -272,85 +351,114 @@ async function sendMessage() {
       return;
     }
 
-    // Layer 2: use a compact model only if available.
-    if (!navigator.gpu) {
-      status.textContent =
-        'My Instant Brain is working, but this question needs deeper ' +
-        'language understanding. Your browser does not currently expose ' +
-        'WebGPU, so the local model cannot start. Use Live Web Search ' +
-        'above for more information.';
+    // Layer 2: optional local model.
+    // Failure here must not prevent online knowledge from working.
+    if (navigator.gpu) {
+      try {
+        const ai = await getEngine(status);
 
-      return;
+        status.textContent = 'ASWIK AI is thinking...';
+
+        const messages = [
+          conversation[0],
+          ...conversation.slice(-10),
+          { role: 'user', content: value }
+        ];
+
+        const result = await ai.chat.completions.create({
+          messages,
+          temperature: 0.6,
+          max_tokens: 256
+        });
+
+        const answer =
+          result.choices?.[0]?.message?.content?.trim();
+
+        if (answer) {
+          conversation.push(
+            { role: 'user', content: value },
+            { role: 'assistant', content: answer }
+          );
+
+          // Keep the history small.
+          if (conversation.length > 21) {
+            conversation.splice(1, conversation.length - 21);
+          }
+
+          status.textContent = answer;
+          return;
+        }
+      } catch (modelError) {
+        console.warn(
+          'Compact model unavailable; using online knowledge.',
+          modelError
+        );
+      }
     }
 
-    const ai = await getEngine(status);
+    // Layer 3: free online knowledge.
+    status.textContent = 'Searching free online knowledge...';
 
-    status.textContent = 'ASWIK AI is thinking...';
+    const onlineAnswer = await getOnlineKnowledge(value);
 
-    conversation.push({
-      role: 'user',
-      content: value
-    });
-
-    const result = await ai.chat.completions.create({
-      messages: [
-        conversation[0],
-        ...conversation.slice(-10)
-      ],
-      temperature: 0.6,
-      max_tokens: 256
-    });
-
-    const answer =
-      result.choices?.[0]?.message?.content?.trim() ||
-      'I could not generate a response. Please try again.';
-
-    conversation.push({
-      role: 'assistant',
-      content: answer
-    });
-
-    status.textContent = answer;
-
+    if (onlineAnswer) {
+      status.textContent = onlineAnswer;
+    } else {
+      status.textContent =
+        'I could not find a suitable reference article for that question. ' +
+        'Try rephrasing it or use Live Web Search for more results.';
+    }
   } catch (error) {
-    console.error('ASWIK AI error:', error);
+    console.error('ASWIK Brain Lite error:', error);
 
     status.textContent =
-      'ASWIK Instant Brain is still available for greetings, ' +
-      'simple calculations, date, time, and developer questions. ' +
-      'The compact AI model could not start on this device. ' +
-      'Use Live Web Search for other questions.';
+      'Something went wrong while processing your question. ' +
+      'Please check your internet connection and try again.';
   } finally {
     busy = false;
   }
 }
 
-document.getElementById('sendBtn').addEventListener('click', sendMessage);
+// =============================================
+// 8. SEND BUTTON AND ENTER KEY
+// =============================================
 
-messageInput.addEventListener('keydown', event => {
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault();
-    sendMessage();
-  }
-});
+if (sendBtn) {
+  sendBtn.addEventListener('click', sendMessage);
+}
 
-// -----------------------------------------
-// ABOUT DEVELOPER
-// -----------------------------------------
+if (messageInput) {
+  messageInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      sendMessage();
+    }
+  });
+}
+
+// =============================================
+// 9. ABOUT DEVELOPER
+// =============================================
 
 const aboutDialog = document.getElementById('aboutDialog');
+const aboutBtn = document.getElementById('aboutBtn');
+const closeAbout = document.getElementById('closeAbout');
 
-document.getElementById('aboutBtn').addEventListener('click', () => {
-  aboutDialog.showModal();
-});
+if (aboutDialog && aboutBtn) {
+  aboutBtn.addEventListener('click', () => {
+    aboutDialog.showModal();
+  });
+}
 
-document.getElementById('closeAbout').addEventListener('click', () => {
-  aboutDialog.close();
-});
+if (aboutDialog && closeAbout) {
+  closeAbout.addEventListener('click', () => {
+    aboutDialog.close();
+  });
+}
 
-// -----------------------------------------
-// SERVICE WORKER
-// -----------------------------------------
+// =============================================
+// 10. SERVICE WORKER
+// =============================================
 
 if (
   'serviceWorker' in navigator &&
