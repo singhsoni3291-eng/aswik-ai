@@ -1,686 +1,547 @@
 
-'use strict';
+/*
+  ASWIK AI — FREE NEWS & FESTIVAL RETRIEVAL
+  Developer: Aswik Singh
+  No API keys or paid services required.
 
-// =============================================
-// ASWIK AI — ACCURATE RETRIEVAL ENGINE
-// Developer: Aswik Singh
-// Free online sources; no AI API key required.
-// =============================================
+  News: publisher RSS feeds via a public CORS proxy.
+  Festivals: Indian Festival API, with cautious date handling.
+*/
 
-const chat = document.getElementById('chat');
-const searchForm = document.getElementById('searchForm');
-const searchInput = document.getElementById('searchInput');
-const messageInput = document.getElementById('messageInput');
-const sendBtn = document.getElementById('sendBtn');
+"use strict";
 
-let busy = false;
-
-const SOURCES = {
-  webSearch: 'https://api.mwmbl.org/api/v2/search/?q=',
-  newsSearch: 'https://ariverofnews.com/api/v1/search.json?q=',
-  festival: 'https://indian-festival-api.vercel.app/api/festivals?date=',
-  wikipediaSearch: 'https://en.wikipedia.org/w/rest.php/v1/search/page?q=',
-  wikipediaSummary: 'https://en.wikipedia.org/api/rest_v1/page/summary/'
+const ASWIK = {
+  name: "ASWIK AI",
+  developer: "Aswik Singh",
+  newsProxy: "https://proxy.cors.dev/",
+  festivalApi: "https://indian-festival-api.vercel.app/api/festivals",
+  timeoutMs: 12000
 };
 
-function indiaDateParts() {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Kolkata',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).formatToParts(new Date());
+// ---------- Find elements in the existing interface ----------
 
-  const values = {};
-  parts.forEach(part => values[part.type] = part.value);
-  return values;
-}
-
-function indiaDateISO() {
-  const p = indiaDateParts();
-  return `${p.year}-${p.month}-${p.day}`;
-}
-
-function readableIndiaDate() {
-  return new Date().toLocaleDateString('en-IN', {
-    timeZone: 'Asia/Kolkata',
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  });
-}
-
-// =============================================
-// 1. FAST, KNOWN ANSWERS
-// =============================================
-
-function instantBrain(input) {
-  const q = input.toLowerCase()
-    .replace(/[?!.,]+$/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  if (/^(hi|hello|hey|hii+|heyy+|namaste|good morning|good afternoon|good evening)$/.test(q)) {
-    return 'Hello! ⚡ I am ASWIK AI, created by Aswik Singh. What would you like to explore?';
+function findElement(selectors) {
+  for (const selector of selectors) {
+    const element = document.querySelector(selector);
+    if (element) return element;
   }
-
-  if (/\b(who (made|created|developed|built) (you|aswik ai)|who is your (creator|developer)|who made aswik ai|who created aswik ai)\b/.test(q)) {
-    return 'I was created and developed by Aswik Singh. ⚡';
-  }
-
-  if (/^(who are you|what are you|introduce yourself|tell me about yourself)$/.test(q)) {
-    return 'I am ASWIK AI, created by Aswik Singh. I can answer some common questions and retrieve online information. I am not yet a generative AI model, so complex original answers may require better sources.';
-  }
-
-  if (/^(what can you do|help|your features|what are your features)$/.test(q)) {
-    return 'I can answer common questions, calculate simple arithmetic, tell you the date and time in India, retrieve reference information, search the web, look up news and check a date-specific festival calendar.';
-  }
-
-  if (/\b(vibgyor|rainbow colours?|rainbow colors?)\b/.test(q)) {
-    return 'VIBGYOR stands for Violet, Indigo, Blue, Green, Yellow, Orange and Red — the seven colours traditionally listed in a rainbow. 🌈';
-  }
-
-  if (/\b(today'?s date|current date|what date is it|what day is it|date today)\b/.test(q)) {
-    return 'Today in India is ' + readableIndiaDate() + '. ⚡';
-  }
-
-  if (/\b(what time is it|current time|tell me the time|what is the time|what'?s the time|time right now)\b/.test(q)) {
-    return 'The current time in India is ' +
-      new Date().toLocaleTimeString('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      }) + ' IST.';
-  }
-
-  const math = q.match(
-    /^(?:(?:what is|calculate|solve)\s+)?(-?\d+(?:\.\d+)?)\s*([+\-*/×÷])\s*(-?\d+(?:\.\d+)?)$/
-  );
-
-  if (math) {
-    const a = Number(math[1]);
-    const b = Number(math[3]);
-    const op = math[2];
-    let result;
-
-    if (op === '+') result = a + b;
-    else if (op === '-') result = a - b;
-    else if (op === '*' || op === '×') result = a * b;
-    else if (op === '/' || op === '÷') {
-      if (b === 0) return 'Division by zero is undefined.';
-      result = a / b;
-    }
-
-    if (Number.isFinite(result)) {
-      return 'The answer is ' + Number(result.toPrecision(12)) + '. ⚡';
-    }
-  }
-
-  if (/^(thanks|thank you|thx|thank you so much)$/.test(q)) {
-    return 'You are welcome! ⚡';
-  }
-
   return null;
 }
 
-// =============================================
-// 2. CLOCK
-// =============================================
+const chatBox = findElement([
+  "#chatMessages", "#messages", "#chatHistory",
+  ".chat-messages", ".messages", ".chat-history",
+  "#chat", "[data-chat-messages]"
+]);
 
-function updateClock() {
-  const clock = document.getElementById('clock');
-  if (!clock) return;
+const messageInput = findElement([
+  "#userInput", "#messageInput", "#chatInput",
+  "#questionInput", "textarea",
+  'input[type="text"]'
+]);
 
-  clock.textContent = new Date().toLocaleTimeString('en-IN', {
-    timeZone: 'Asia/Kolkata',
-    hour: '2-digit',
-    minute: '2-digit'
-  }) + ' IST';
+const sendButton = findElement([
+  "#sendBtn", "#sendButton", "#submitBtn",
+  ".send-btn", ".send-button", '[data-send]'
+]);
+
+// ---------- Safe, accessible message rendering ----------
+
+function addMessage(text, role = "assistant", links = []) {
+  if (!chatBox) {
+    console.log(`${ASWIK.name} (${role}): ${text}`);
+    return;
+  }
+
+  const bubble = document.createElement("div");
+  bubble.className = `message ${role}-message`;
+  bubble.style.whiteSpace = "pre-wrap";
+
+  const content = document.createElement("p");
+  content.textContent = text;
+  bubble.appendChild(content);
+
+  for (const item of links) {
+    if (!item.url || !/^https?:\/\//i.test(item.url)) continue;
+
+    const link = document.createElement("a");
+    link.href = item.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = item.label || item.url;
+    link.style.display = "block";
+    link.style.marginTop = "8px";
+    bubble.appendChild(link);
+  }
+
+  chatBox.appendChild(bubble);
+  chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-updateClock();
-setInterval(updateClock, 15000);
-
-// =============================================
-// 3. SAFE CHAT DISPLAY
-// =============================================
-
-function addMessage(text, who = 'user') {
-  const row = document.createElement('div');
-  row.className = 'message ' + who;
-
-  const avatar = document.createElement('div');
-  avatar.className = 'avatar';
-  avatar.textContent = who === 'user' ? 'Y' : 'A';
-
-  const bubble = document.createElement('div');
-  bubble.className = 'bubble';
-
-  const heading = document.createElement('strong');
-  heading.textContent = who === 'user' ? 'YOU' : 'ASWIK AI';
-
-  const paragraph = document.createElement('p');
-  paragraph.textContent = text;
-
-  bubble.append(heading, paragraph);
-  row.append(avatar, bubble);
-
-  if (chat) {
-    chat.append(row);
-    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-
-  return paragraph;
+function showTyping() {
+  const indicator = document.createElement("div");
+  indicator.className = "message assistant-message aswik-loading";
+  indicator.textContent = "ASWIK is checking sources…";
+  if (chatBox) chatBox.appendChild(indicator);
+  return indicator;
 }
 
-function safeHttpUrl(value) {
-  try {
-    const url = new URL(value);
-    return ['https:', 'http:'].includes(url.protocol) ? url.href : null;
-  } catch {
-    return null;
-  }
+function removeTyping(indicator) {
+  if (indicator && indicator.parentNode) indicator.remove();
 }
 
-function addResults(headingText, results) {
-  const row = document.createElement('div');
-  row.className = 'message assistant';
+// ---------- Network helper with timeout ----------
 
-  const avatar = document.createElement('div');
-  avatar.className = 'avatar';
-  avatar.textContent = 'A';
-
-  const bubble = document.createElement('div');
-  bubble.className = 'bubble';
-
-  const heading = document.createElement('strong');
-  heading.textContent = 'ASWIK AI';
-
-  const intro = document.createElement('p');
-  intro.textContent = headingText;
-  bubble.append(heading, intro);
-
-  let shown = 0;
-
-  for (const result of results) {
-    if (shown >= 5) break;
-
-    const href = safeHttpUrl(result.url || result.link);
-    const titleText = result.title || result.name;
-
-    if (!href || !titleText) continue;
-
-    const item = document.createElement('div');
-    item.style.marginTop = '12px';
-
-    const link = document.createElement('a');
-    link.href = href;
-    link.target = '_blank';
-    link.rel = 'noopener noreferrer';
-    link.textContent = titleText;
-    link.style.fontWeight = 'bold';
-
-    item.append(link);
-
-    const sourceText = result.source || result.publisher || '';
-    const dateText = result.published || result.date || result.publishedAt || '';
-
-    if (sourceText || dateText) {
-      const meta = document.createElement('p');
-      meta.textContent = [sourceText, dateText].filter(Boolean).join(' · ');
-      meta.style.fontSize = '0.85em';
-      item.append(meta);
-    }
-
-    const snippetText = result.snippet || result.description ||
-      result.summary || result.content || '';
-
-    if (snippetText) {
-      const snippet = document.createElement('p');
-      snippet.textContent = snippetText;
-      item.append(snippet);
-    }
-
-    bubble.append(item);
-    shown++;
-  }
-
-  if (!shown) {
-    const empty = document.createElement('p');
-    empty.textContent = 'No usable source links were returned.';
-    bubble.append(empty);
-  }
-
-  row.append(avatar, bubble);
-
-  if (chat) {
-    chat.append(row);
-    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-}
-
-// =============================================
-// 4. REQUEST HELPER WITH TIMEOUT
-// =============================================
-
-async function fetchJson(url, timeoutMs = 10000) {
+async function fetchWithTimeout(url) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timer = setTimeout(() => controller.abort(), ASWIK.timeoutMs);
 
   try {
     const response = await fetch(url, {
+      method: "GET",
       signal: controller.signal,
-      credentials: 'omit'
+      credentials: "omit"
     });
 
     if (!response.ok) {
-      throw new Error('HTTP ' + response.status);
+      throw new Error(`Source returned HTTP ${response.status}`);
     }
 
-    return await response.json();
+    return response;
   } finally {
     clearTimeout(timer);
   }
 }
 
-// =============================================
-// 5. GENERAL WEB SEARCH
-// =============================================
+// ---------- India date and time ----------
 
-async function searchWebResults(query) {
-  const url = SOURCES.webSearch + encodeURIComponent(query);
-  const payload = await fetchJson(url);
+function indiaNow() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date());
 
-  const items = Array.isArray(payload)
-    ? payload
-    : payload.results || payload.data || payload.items || [];
-
-  return items.map(item => ({
-    title: item.title || item.name || '',
-    url: item.url || item.link || '',
-    snippet: item.description || item.snippet || item.summary || item.content || '',
-    source: item.source || item.domain || ''
-  })).filter(item => item.title && item.url);
+  const part = type => parts.find(item => item.type === type)?.value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
-function googleFallback(query) {
-  return [{
-    title: 'Search Google for: ' + query,
-    url: 'https://www.google.com/search?q=' + encodeURIComponent(query),
-    snippet: 'Open Google to check more sources.'
-  }];
+function formatIndiaDate(dateString) {
+  const date = new Date(`${dateString}T12:00:00+05:30`);
+  return new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric"
+  }).format(date);
 }
 
-// =============================================
-// 6. CURRENT NEWS SEARCH
-// =============================================
+// ---------- RSS news retrieval ----------
 
-function isNewsQuestion(question) {
-  return /\b(news|headlines|breaking|latest|happening in the world|world today|current events|today's events|today in the world|latest updates)\b/i.test(question);
-}
-
-async function searchNews(query) {
-  const url = SOURCES.newsSearch + encodeURIComponent(query) +
-    '&lang=en&from=' + encodeURIComponent(isoDaysAgo(3)) +
-    '&to=' + encodeURIComponent(isoTodayUTC());
-
-  const payload = await fetchJson(url, 12000);
-
-  const items = Array.isArray(payload)
-    ? payload
-    : payload.results || payload.data || payload.items || payload.articles || [];
-
-  return items.map(item => ({
-    title: item.title || item.headline || '',
-    url: item.url || item.link || item.href || '',
-    snippet: item.summary || item.description || item.snippet || '',
-    source: item.source || item.publisher || item.publication || '',
-    published: formatNewsDate(item.pa || item.ts || item.fa ||
-      item.publishedAt || item.published || item.date || '')
-  })).filter(item => item.title && item.url);
-}
-
-function isoTodayUTC() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function isoDaysAgo(days) {
-  const date = new Date();
-  date.setUTCDate(date.getUTCDate() - days);
-  return date.toISOString().slice(0, 10);
-}
-
-function formatNewsDate(value) {
-  if (!value) return '';
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-
-  return date.toLocaleString('en-IN', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-    timeZone: 'Asia/Kolkata'
-  }) + ' IST';
-}
-
-async function answerNewsQuestion(question, status) {
-  status.textContent = '⚡ Checking recent news sources...';
-
-  try {
-    let results = await searchNews(question);
-
-    if (!results.length) {
-      results = await searchNews('world news latest');
+const NEWS_FEEDS = {
+  world: [
+    {
+      source: "BBC World",
+      url: "https://feeds.bbci.co.uk/news/world/rss.xml"
+    },
+    {
+      source: "DW News",
+      url: "https://rss.dw.com/xml/rss-en-all",
+      direct: true
     }
-
-    if (results.length) {
-      status.textContent =
-        'Here are recent news results. Check the publisher and publication date before relying on a story.';
-      addResults('Recent news results from a news-focused source:', results);
-      return;
+  ],
+  india: [
+    {
+      source: "Times of India",
+      url: "https://timesofindia.indiatimes.com/rssfeedstopstories.cms"
+    },
+    {
+      source: "BBC News",
+      url: "https://feeds.bbci.co.uk/news/rss.xml"
     }
-  } catch (error) {
-    console.warn('ASWIK news search:', error);
+  ],
+  tech: [
+    {
+      source: "BBC Technology",
+      url: "https://feeds.bbci.co.uk/news/technology/rss.xml"
+    },
+    {
+      source: "The New York Times",
+      url: "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml",
+      direct: true
+    }
+  ]
+};
+
+function parseRSS(xmlText, sourceName) {
+  const xml = new DOMParser().parseFromString(xmlText, "application/xml");
+  if (xml.querySelector("parsererror")) {
+    throw new Error(`${sourceName} returned invalid RSS.`);
   }
 
-  status.textContent =
-    'The news source did not return usable recent articles. Trying general web search...';
+  return [...xml.querySelectorAll("item")].map(item => {
+    const title = item.querySelector("title")?.textContent?.trim() || "";
+    const rawLink = item.querySelector("link")?.textContent?.trim() || "";
+    const pubDate = item.querySelector("pubDate")?.textContent?.trim() || "";
+    const timestamp = pubDate ? Date.parse(pubDate) : NaN;
 
-  try {
-    const results = await searchWebResults(question);
-    if (results.length) {
-      addResults('Web results for your news question. Verify publication dates:', results);
-      return;
+    let safeUrl = "";
+    try {
+      const parsed = new URL(rawLink);
+      if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+        safeUrl = parsed.href;
+      }
+    } catch {
+      safeUrl = "";
     }
-  } catch (error) {
-    console.warn('ASWIK web search:', error);
+
+    return {
+      title,
+      url: safeUrl,
+      source: sourceName,
+      timestamp
+    };
+  }).filter(item => item.title && item.url);
+}
+
+async function readFeed(feed) {
+  // Use the direct URL only for feeds documented to allow browser CORS.
+  const url = feed.direct
+    ? feed.url
+    : ASWIK.newsProxy + feed.url;
+
+  const response = await fetchWithTimeout(url);
+  const xml = await response.text();
+  return parseRSS(xml, feed.source);
+}
+
+function newsCategory(question) {
+  if (/\b(technology|tech news|artificial intelligence news|AI news|science news|gadgets)\b/i.test(question)) {
+    return "tech";
   }
 
-  addResults('I could not verify current news automatically. Open a live search:', googleFallback(question));
+  if (/\b(india|indian|india news|latest india news|national news)\b/i.test(question)) {
+    return "india";
+  }
+
+  return "world";
 }
 
-// =============================================
-// 7. FESTIVAL LOOKUP BY ACTUAL DATE
-// =============================================
+async function getLatestNews(question) {
+  const category = newsCategory(question);
+  const feeds = NEWS_FEEDS[category];
 
-function isFestivalQuestion(question) {
-  return /\b(festival|festivals|holiday|holidays|tyohar|त्योहार|त्यौहार)\b/i.test(question) &&
-    /\b(today|tonight|now|current|upcoming|next|date|india|indian|aaj|आज|which|what|is|are|kaun)\b/i.test(question);
-}
+  // Each source is allowed to fail independently.
+  const settled = await Promise.allSettled(feeds.map(readFeed));
 
-function getFestivalList(payload) {
-  if (Array.isArray(payload)) return payload;
-  return payload.data || payload.festivals || payload.results || [];
-}
+  const articles = settled
+    .filter(result => result.status === "fulfilled")
+    .flatMap(result => result.value);
 
-function getFestivalDate(item) {
-  return item.date || item.date_iso || item.date_2026 ||
-    item.date_2027 || item.date_2028 || '';
-}
-
-async function searchFestivalsToday() {
-  const date = indiaDateISO();
-  const url = SOURCES.festival + encodeURIComponent(date);
-  const payload = await fetchJson(url, 12000);
-  const items = getFestivalList(payload);
-
-  // The API supports a date filter. Still validate explicit dates where available.
-  return items.filter(item => {
-    const itemDate = getFestivalDate(item);
-    return !itemDate || itemDate === date;
+  // De-duplicate by canonical URL and headline.
+  const seen = new Set();
+  const unique = articles.filter(article => {
+    const key = `${article.url}|${article.title.toLowerCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
-}
 
-async function answerFestivalQuestion(status) {
-  const today = indiaDateISO();
-  const readable = readableIndiaDate();
+  const now = Date.now();
+  const recent = unique
+    .filter(article =>
+      Number.isFinite(article.timestamp) &&
+      article.timestamp <= now + 60 * 60 * 1000 &&
+      article.timestamp >= now - 3 * 24 * 60 * 60 * 1000
+    )
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, 8);
 
-  status.textContent = '⚡ Checking the festival calendar for ' + readable + '...';
-
-  try {
-    const festivals = await searchFestivalsToday();
-
-    if (festivals.length) {
-      const names = festivals.map(item => {
-        const region = Array.isArray(item.states) &&
-          !item.states.includes('all')
-          ? ' — regional observance (' + item.states.join(', ') + ')'
-          : '';
-
-        return (item.name || item.local_name || 'Festival') + region +
-          (item.description ? '\n' + item.description : '');
-      });
-
-      status.textContent =
-        'Festival calendar entries for ' + readable + ':\n\n' +
-        names.join('\n\n') +
-        '\n\nSource: Indian Festival API\n' +
-        'Festival dates and regional observances can differ; confirm important dates locally.';
-
-      return;
-    }
-  } catch (error) {
-    console.warn('ASWIK festival calendar:', error);
-  }
-
-  status.textContent =
-    'The date-specific calendar did not provide a verified festival for ' +
-    readable + '. I will check current web results rather than guess.';
-
-  try {
-    const results = await searchWebResults(
-      'Indian festivals on ' + readable + ' India festival calendar'
+  if (!recent.length) {
+    const query = encodeURIComponent(
+      `${question} latest news today`
     );
 
-    if (results.length) {
-      addResults(
-        'Possible festival sources for ' + readable +
-        '. Verify the date and your region on the linked page:',
-        results
-      );
-      return;
-    }
-  } catch (error) {
-    console.warn('ASWIK festival web fallback:', error);
+    addMessage(
+      "I couldn't verify recent headlines from the available feeds. " +
+      "I won't show older or unverified stories as today's news. " +
+      "You can search current coverage here:"
+    , "assistant", [{
+      label: "Search current news",
+      url: `https://www.google.com/search?q=${query}&tbm=nws`
+    }]);
+    return;
   }
 
-  addResults('I could not verify a festival date. Check these live results:', googleFallback(
-    'Indian festivals today ' + today
-  ));
+  const label = {
+    world: "recent world news",
+    india: "recent Indian news",
+    tech: "recent technology news"
+  }[category];
+
+  addMessage(
+    `Here are ${label} from the last 3 days. ` +
+    "Publication times are shown in India Standard Time (IST). " +
+    "Open a headline to read the original report.",
+    "assistant"
+  );
+
+  for (const article of recent) {
+    const published = new Date(article.timestamp).toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      dateStyle: "medium",
+      timeStyle: "short"
+    });
+
+    addMessage(
+      `${article.title}\nSource: ${article.source}\nPublished: ${published} IST`,
+      "assistant",
+      [{ label: "Read original article ↗", url: article.url }]
+    );
+  }
 }
 
-// =============================================
-// 8. WIKIPEDIA REFERENCE LOOKUP
-// =============================================
+// ---------- Festival date retrieval ----------
 
-async function getWikipediaAnswer(question) {
-  const searchTerm = question.trim()
-    .replace(/^(what is|what are|who is|who was|explain|define|tell me about|can you explain)\s+/i, '')
-    .replace(/[?!.,]+$/g, '')
-    .trim();
+function getFestivalDate(record, year) {
+  // The API documents year-specific fields such as date_2026.
+  const candidates = [
+    record?.[`date_${year}`],
+    record?.date
+  ];
 
-  if (!searchTerm) return null;
+  return candidates.find(value =>
+    typeof value === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(value)
+  ) || "";
+}
 
-  const url = SOURCES.wikipediaSearch +
-    encodeURIComponent(searchTerm) + '&limit=5';
+async function getFestivalsForToday() {
+  const date = indiaNow();
+  const year = Number(date.slice(0, 4));
+  const month = Number(date.slice(5, 7));
 
-  const data = await fetchJson(url);
-  const pages = data.pages || [];
+  // Fetch the month and check exact dates locally. This avoids
+  // depending on a date-filter endpoint that may return no matches.
+  const url = `${ASWIK.festivalApi}?month=${month}`;
+  const response = await fetchWithTimeout(url);
+  const payload = await response.json();
 
-  if (!pages.length) return null;
+  const records = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : Array.isArray(payload?.festivals)
+        ? payload.festivals
+        : [];
 
-  const normalise = value => String(value || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]/g, '')
-    .trim();
-
-  const target = normalise(searchTerm);
-  const selected = pages.find(page =>
-    normalise(page.title) === target ||
-    normalise(page.key) === target
-  ) || pages[0];
-
-  const title = selected.key || selected.title;
-  const summaryUrl = SOURCES.wikipediaSummary +
-    encodeURIComponent(title.replace(/ /g, '_'));
-
-  const article = await fetchJson(summaryUrl);
-
-  if (!article.extract ||
-      article.type === 'disambiguation' ||
-      article.type === 'not_found') {
-    return null;
+  if (!records.length) {
+    throw new Error("The festival source returned no usable records.");
   }
 
-  return {
-    text: article.extract,
-    title: article.title,
-    url: article.content_urls?.desktop?.page ||
-      'https://en.wikipedia.org/wiki/' +
-      encodeURIComponent(title.replace(/ /g, '_'))
-  };
+  const matches = records.filter(record =>
+    getFestivalDate(record, year) === date
+  );
+
+  if (matches.length) {
+    const links = matches.map(festival => ({
+      label: `More about ${festival.name || "this festival"}`,
+      url: `https://www.google.com/search?q=${encodeURIComponent(
+        `${festival.name || "Indian festival"} ${year} date India`
+      )}`
+    }));
+
+    addMessage(
+      `Festival calendar result for ${formatIndiaDate(date)}:\n\n` +
+      matches.map(festival => {
+        const name = festival.name || "Unnamed festival";
+        const religion = festival.religion
+          ? ` (${festival.religion})`
+          : "";
+        const description = festival.description
+          ? ` — ${festival.description}`
+          : "";
+        return `• ${name}${religion}${description}`;
+      }).join("\n") +
+      "\n\nSource: a community-maintained festival dataset, not an official government confirmation.",
+      "assistant",
+      links
+    );
+    return;
+  }
+
+  // No matching entry does NOT mean no festival occurs today.
+  addMessage(
+    `The festival dataset did not confirm a festival for ${formatIndiaDate(date)}. ` +
+    "That does not prove that no religious, regional, or local festival is observed today. " +
+    "Please verify with an official state holiday calendar or a trusted local source.",
+    "assistant",
+    [{
+      label: "Search Indian festivals for this date",
+      url: `https://www.google.com/search?q=${encodeURIComponent(
+        `Indian festivals today ${date} official calendar`
+      )}`
+    }, {
+      label: "Check Indian government holiday information",
+      url: "https://www.india.gov.in/"
+    }]
+  );
 }
 
-// =============================================
-// 9. MAIN MESSAGE ROUTER
-// =============================================
+// ---------- Simple instant answers ----------
 
-async function sendMessage() {
-  const value = messageInput ? messageInput.value.trim() : '';
-  if (!value || busy) return;
+function instantAnswer(question) {
+  const q = question.trim().toLowerCase();
 
-  addMessage(value, 'user');
-  if (messageInput) messageInput.value = '';
+  if (/^(hi|hello|hey|hii|helo)[!. ]*$/.test(q)) {
+    return `Hello! I'm ${ASWIK.name}, developed by ${ASWIK.developer}. How can I help?`;
+  }
 
-  busy = true;
-  const status = addMessage('⚡ ASWIK is checking your question...', 'assistant');
+  if (/who (made|created|developed) you|who made aswik|who created aswik/i.test(q)) {
+    return `I am ASWIK AI, created and developed by ${ASWIK.developer}. ⚡`;
+  }
+
+  if (/about (the )?developer|who is aswik singh/i.test(q)) {
+    return `ASWIK AI was created by ${ASWIK.developer}.`;
+  }
+
+  if (/vibgyor/.test(q)) {
+    return "VIBGYOR stands for Violet, Indigo, Blue, Green, Yellow, Orange and Red.";
+  }
+
+  if (/\b(time|date|day)\b/.test(q) &&
+      /\b(today|now|current|india|time|date|day)\b/.test(q)) {
+    return `In India, today is ${formatIndiaDate(indiaNow())}. Current time: ${
+      new Intl.DateTimeFormat("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true
+      }).format(new Date())
+    } IST.`;
+  }
+
+  return null;
+}
+
+// ---------- Route the question ----------
+
+async function handleQuestion(rawQuestion) {
+  const question = rawQuestion.trim();
+  if (!question) return;
+
+  addMessage(question, "user");
+
+  const immediate = instantAnswer(question);
+  if (immediate) {
+    addMessage(immediate, "assistant");
+    return;
+  }
+
+  const loading = showTyping();
 
   try {
-    const instant = instantBrain(value);
-
-    if (instant !== null) {
-      status.textContent = instant;
+    if (
+      /\bfestival(s)?\b/i.test(question) &&
+      /\b(today|now|date|india|indian|happening)\b/i.test(question)
+    ) {
+      await getFestivalsForToday();
       return;
     }
 
-    if (isFestivalQuestion(value)) {
-      await answerFestivalQuestion(status);
+    if (
+      /\b(latest|today|current|recent|headlines|news|what is happening|what's happening)\b/i.test(question)
+    ) {
+      await getLatestNews(question);
       return;
     }
 
-    if (isNewsQuestion(value)) {
-      await answerNewsQuestion(value, status);
-      return;
-    }
-
-    status.textContent = '⚡ Searching relevant web sources...';
-
-    try {
-      const results = await searchWebResults(value);
-
-      if (results.length) {
-        status.textContent =
-          'I found these web sources. Check the links to confirm the answer.';
-        addResults('Search results for your question:', results);
-        return;
-      }
-    } catch (error) {
-      console.warn('ASWIK general search:', error);
-    }
-
-    status.textContent = '⚡ Checking Wikipedia for a reference answer...';
-
-    try {
-      const article = await getWikipediaAnswer(value);
-
-      if (article) {
-        status.textContent = article.text +
-          '\n\nSource: Wikipedia — ' + article.title +
-          '\n' + article.url;
-        return;
-      }
-    } catch (error) {
-      console.warn('ASWIK Wikipedia lookup:', error);
-    }
-
-    status.textContent =
-      'I could not find a suitable answer from the sources available right now.';
-
-    addResults('Try a broader live search:', googleFallback(value));
+    // This website does not pretend to answer arbitrary questions
+    // with a language model. Open a search for other queries.
+    addMessage(
+      "I don't have a generative AI model connected yet, so I won't pretend I've verified an answer. " +
+      "You can search the web for reliable information below.",
+      "assistant",
+      [{
+        label: "Search the web for this question ↗",
+        url: `https://www.google.com/search?q=${encodeURIComponent(question)}`
+      }]
+    );
   } catch (error) {
-    console.error('ASWIK AI error:', error);
-    status.textContent =
-      'An online source failed. Please check your connection and try again.';
+    console.error("ASWIK retrieval error:", error);
+
+    addMessage(
+      "I couldn't reach a data source just now. The service may be unavailable or blocking the request. " +
+      "I won't invent an answer. Try again later or open a web search.",
+      "assistant",
+      [{
+        label: "Search the web ↗",
+        url: `https://www.google.com/search?q=${encodeURIComponent(question)}`
+      }]
+    );
   } finally {
-    busy = false;
+    removeTyping(loading);
   }
 }
 
-// =============================================
-// 10. LIVE SEARCH FORM
-// =============================================
+// ---------- Connect the existing chat controls ----------
 
-async function runSearchForm(query) {
-  const q = query.trim();
-  if (!q || busy) return;
+function submitCurrentQuestion(event) {
+  if (event) event.preventDefault();
+  if (!messageInput) {
+    console.error("ASWIK AI: couldn't find the message input element.");
+    return;
+  }
 
-  if (messageInput) messageInput.value = q;
-  await sendMessage();
+  const question = messageInput.value.trim();
+  if (!question) return;
+
+  messageInput.value = "";
+  handleQuestion(question);
 }
 
-if (searchForm) {
-  searchForm.addEventListener('submit', async event => {
-    event.preventDefault();
-    const query = searchInput ? searchInput.value : '';
-    if (searchInput) searchInput.value = '';
-    await runSearchForm(query);
-  });
+if (sendButton) {
+  sendButton.addEventListener("click", submitCurrentQuestion);
 }
-
-document.querySelectorAll('[data-query]').forEach(button => {
-  button.addEventListener('click', () => {
-    runSearchForm(button.dataset.query || '');
-  });
-});
-
-if (sendBtn) sendBtn.addEventListener('click', sendMessage);
 
 if (messageInput) {
-  messageInput.addEventListener('keydown', event => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      sendMessage();
-    }
-  });
-}
+  const form = messageInput.closest("form");
 
-// =============================================
-// 11. ABOUT DEVELOPER
-// =============================================
-
-const aboutDialog = document.getElementById('aboutDialog');
-const aboutBtn = document.getElementById('aboutBtn');
-const closeAbout = document.getElementById('closeAbout');
-
-if (aboutDialog && aboutBtn) {
-  aboutBtn.addEventListener('click', () => aboutDialog.showModal());
-}
-
-if (aboutDialog && closeAbout) {
-  closeAbout.addEventListener('click', () => aboutDialog.close());
-}
-
-// =============================================
-// 12. SERVICE WORKER
-// =============================================
-
-if ('serviceWorker' in navigator &&
-    location.protocol.startsWith('http')) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(error => {
-      console.warn('Service worker registration failed:', error);
+  if (form) {
+    form.addEventListener("submit", submitCurrentQuestion);
+  } else {
+    messageInput.addEventListener("keydown", event => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        submitCurrentQuestion(event);
+      }
     });
-  });
+  }
 }
+
+// ---------- Live clock, if the page has a clock element ----------
+
+function updateIndiaClock() {
+  const clock = findElement([
+    "#clock", "#liveClock", "#systemTime",
+    ".clock", ".system-time", "[data-clock]"
+  ]);
+
+  if (!clock) return;
+
+  clock.textContent = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true
+  }).format(new Date()) + " IST";
+}
+
+updateIndiaClock();
+setInterval(updateIndiaClock, 1000);
+
+console.log("ASWIK AI retrieval engine loaded.");
+console.log("Developer:", ASWIK.developer);
