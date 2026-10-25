@@ -4,8 +4,7 @@ const searchForm = document.getElementById('searchForm');
 const searchInput = document.getElementById('searchInput');
 const messageInput = document.getElementById('messageInput');
 
-const MODEL_ID = 'Qwen2.5-1.5B-Instruct-q4f16_1-MLC';
-
+const MODEL_ID = 'Llama-3.2-1B-Instruct-q4f16_1-MLC';
 let engine = null;
 let enginePromise = null;
 let busy = false;
