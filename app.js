@@ -2,8 +2,9 @@
 'use strict';
 
 // =============================================
-// ASWIK AI — BRAIN LITE
+// ASWIK AI — BRAIN LITE + LIVE WEB SEARCH
 // Developer: Aswik Singh
+// Free sources: Mwmbl, Wikipedia, Indian Festival API
 // =============================================
 
 const chat = document.getElementById('chat');
@@ -25,33 +26,36 @@ function instantBrain(input) {
     .replace(/\s+/g, ' ')
     .trim();
 
-  // Greetings
   if (/^(hi|hello|hey|hii+|heyy+|namaste|good morning|good afternoon|good evening)(\s+(there|from my pc|from my phone))?$/.test(q)) {
-    return 'Hello! ⚡ I am ASWIK AI, ready to help. What shall we do today?';
+    return 'Hello! ⚡ I am ASWIK AI, created by Aswik Singh. What shall we explore today?';
   }
 
-  // Developer identity
   if (/\b(who (made|created|developed|built) (you|aswik ai)|who is your (creator|developer)|who made aswik ai|who created aswik ai)\b/.test(q)) {
     return 'I was created and developed by Aswik Singh. ⚡ Welcome to ASWIK AI!';
   }
 
-  // Identity
   if (/^(who are you|what are you|introduce yourself|tell me about yourself)$/.test(q)) {
-    return 'I am ASWIK AI, a personal assistant created by Aswik Singh. My Brain Lite system answers quick questions and retrieves free online reference information.';
+    return 'I am ASWIK AI, a personal assistant created by Aswik Singh. I can answer quick questions and search online sources for information.';
   }
 
-  // Capabilities
   if (/^(what can you do|help|your features|what are your features)$/.test(q)) {
-    return 'I can answer quick questions, tell you the date and time, calculate simple arithmetic, retrieve Wikipedia information, and open Google search results.';
+    return 'I can answer common questions, calculate arithmetic, tell you the current date and time, search the web, retrieve Wikipedia information, and check a date-specific Indian festival source. I am still developing my generative reasoning abilities.';
   }
 
-  // Current date
-  if (
-    (/\b(date|day)\b/.test(q) &&
-      /\b(what|today|date|day|is|tell|current|the)\b/.test(q)) ||
-    /\b(today's date|todays date|current date|what day is it)\b/.test(q)
-  ) {
-    return 'Today is ' + new Date().toLocaleDateString('en-IN', {
+  // VIBGYOR / rainbow colours
+  if (/\b(vibgyor|rainbow colours?|rainbow colors?)\b/.test(q) &&
+      /\b(what|meaning|means|stand for|colours?|colors?|rainbow|explain|full form|is|are)\b/.test(q)) {
+    return 'VIBGYOR is a mnemonic for the seven colours traditionally listed in a rainbow: Violet, Indigo, Blue, Green, Yellow, Orange and Red. 🌈';
+  }
+
+  if (/^(what is )?vibgyor$/.test(q)) {
+    return 'VIBGYOR stands for Violet, Indigo, Blue, Green, Yellow, Orange and Red — the seven colours traditionally listed in a rainbow. 🌈';
+  }
+
+  // Current date in India
+  if (/\b(today'?s date|current date|what date is it|what day is it|date today)\b/.test(q)) {
+    return 'Today in India is ' + getIndiaDate().toLocaleDateString('en-IN', {
+      timeZone: 'Asia/Kolkata',
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -59,17 +63,16 @@ function instantBrain(input) {
     }) + '. ⚡';
   }
 
-  // Current time
-  if (/\b(what time is it|current time|tell me the time|what is the time|what's the time|time right now)\b/.test(q)) {
-    return 'The current local time is ' +
+  if (/\b(what time is it|current time|tell me the time|what is the time|what'?s the time|time right now)\b/.test(q)) {
+    return 'The current time in India is ' +
       new Date().toLocaleTimeString('en-IN', {
+        timeZone: 'Asia/Kolkata',
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit'
-      }) + '. ⚡';
+      }) + ' IST. ⚡';
   }
 
-  // Simple arithmetic
   const mathText = q.match(
     /^(?:(?:what is|calculate|solve)\s+)?(-?\d+(?:\.\d+)?)\s*([+\-*/×÷])\s*(-?\d+(?:\.\d+)?)$/
   );
@@ -93,7 +96,6 @@ function instantBrain(input) {
     }
   }
 
-  // Thanks
   if (/^(thanks|thank you|thx|thank you so much)$/.test(q)) {
     return 'You are welcome! ⚡ I am always ready to help.';
   }
@@ -102,17 +104,49 @@ function instantBrain(input) {
 }
 
 // =============================================
-// 2. LIVE CLOCK
+// 2. INDIA DATE AND LIVE CLOCK
 // =============================================
+
+function getIndiaDate() {
+  // Create a date representing the current date in India.
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date());
+
+  const values = {};
+  for (const part of parts) {
+    values[part.type] = part.value;
+  }
+
+  return new Date(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    12, 0, 0
+  );
+}
+
+function getIndiaDateString() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
+}
 
 function updateClock() {
   const clock = document.getElementById('clock');
   if (!clock) return;
 
-  clock.textContent = new Date().toLocaleTimeString([], {
+  clock.textContent = new Date().toLocaleTimeString('en-IN', {
+    timeZone: 'Asia/Kolkata',
     hour: '2-digit',
     minute: '2-digit'
-  });
+  }) + ' IST';
 }
 
 updateClock();
@@ -144,43 +178,146 @@ function addMessage(text, who = 'user') {
 
   if (chat) {
     chat.append(row);
-    row.scrollIntoView({
-      behavior: 'smooth',
-      block: 'nearest'
-    });
+    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
   return p;
 }
 
+// Safely display clickable web results inside the chat.
+function addSearchResults(titleText, results) {
+  const row = document.createElement('div');
+  row.className = 'message assistant';
+
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  avatar.textContent = 'A';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+
+  const heading = document.createElement('strong');
+  heading.textContent = 'ASWIK AI';
+
+  const intro = document.createElement('p');
+  intro.textContent = titleText;
+
+  bubble.append(heading, intro);
+
+  for (const result of results.slice(0, 5)) {
+    if (!result.title || !result.url) continue;
+
+    let safeUrl;
+    try {
+      safeUrl = new URL(result.url);
+      if (!['https:', 'http:'].includes(safeUrl.protocol)) continue;
+    } catch {
+      continue;
+    }
+
+    const item = document.createElement('div');
+    item.style.marginTop = '12px';
+
+    const link = document.createElement('a');
+    link.href = safeUrl.href;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = result.title;
+    link.style.fontWeight = 'bold';
+
+    const snippet = document.createElement('p');
+    snippet.textContent = result.snippet || 'Open this source to read more.';
+    snippet.style.marginTop = '4px';
+
+    item.append(link, snippet);
+    bubble.append(item);
+  }
+
+  row.append(avatar, bubble);
+
+  if (chat) {
+    chat.append(row);
+    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
 // =============================================
-// 4. GOOGLE WEB SEARCH
+// 4. LIVE WEB SEARCH — MWMBL
 // =============================================
 
-function searchWeb(query) {
+async function getWebResults(query) {
+  const url =
+    'https://api.mwmbl.org/api/v2/search/?q=' +
+    encodeURIComponent(query);
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error('Web search service returned ' + response.status);
+  }
+
+  const payload = await response.json();
+
+  // Accept common response shapes so the UI can handle API changes.
+  const rawResults = Array.isArray(payload)
+    ? payload
+    : (payload.results || payload.data || payload.items || []);
+
+  return rawResults.map(item => ({
+    title: item.title || item.name || '',
+    url: item.url || item.link || '',
+    snippet: item.description || item.snippet ||
+      item.summary || item.content || ''
+  })).filter(item => item.title && item.url);
+}
+
+function googleSearchUrl(query) {
+  return 'https://www.google.com/search?q=' + encodeURIComponent(query);
+}
+
+async function searchWeb(query, showUserMessage = true) {
   const q = query.trim();
   if (!q) return;
 
-  addMessage(q, 'user');
+  if (showUserMessage) addMessage(q, 'user');
 
-  addMessage(
-    'Opening Google results for your question. Check the results for current information.',
-    'assistant'
-  );
+  const status = addMessage('⚡ Searching the web...', 'assistant');
 
-  window.open(
-    'https://www.google.com/search?q=' + encodeURIComponent(q),
-    '_blank',
-    'noopener'
-  );
+  try {
+    const results = await getWebResults(q);
 
-  if (searchInput) searchInput.value = '';
+    if (results.length) {
+      status.textContent = 'Found web results for: ' + q;
+      addSearchResults('Here are relevant web results. Open a source to read the full page.', results);
+    } else {
+      status.textContent = 'The search service returned no usable results.';
+    }
+
+    // Keep Google available as a fallback.
+    addSearchResults('Need more results? Try Google Search:', [{
+      title: 'Search Google for: ' + q,
+      url: googleSearchUrl(q),
+      snippet: 'Opens Google in a new tab.'
+    }]);
+  } catch (error) {
+    console.warn('ASWIK web search error:', error);
+
+    status.textContent =
+      'The live search service is unavailable right now. You can still search Google below.';
+
+    addSearchResults('Fallback web search:', [{
+      title: 'Search Google for: ' + q,
+      url: googleSearchUrl(q),
+      snippet: 'Open Google to see more search results.'
+    }]);
+  }
 }
 
 if (searchForm) {
   searchForm.addEventListener('submit', event => {
     event.preventDefault();
     searchWeb(searchInput ? searchInput.value : '');
+    if (searchInput) searchInput.value = '';
   });
 }
 
@@ -191,7 +328,126 @@ document.querySelectorAll('[data-query]').forEach(button => {
 });
 
 // =============================================
-// 5. FREE ONLINE KNOWLEDGE — WIKIPEDIA
+// 5. DATE-SPECIFIC INDIAN FESTIVAL LOOKUP
+// =============================================
+
+function isFestivalQuestion(question) {
+  return /\b(festival|festivals|holiday|holidays|celebration|celebrations|tyohar|त्योहार|त्यौहार)\b/i.test(question) &&
+    /\b(today|tonight|now|current|upcoming|next|date|india|indian|aaj|आज|kaun|which|what|is|are)\b/i.test(question);
+}
+
+async function getFestivalsForToday() {
+  const date = getIndiaDateString();
+  const url =
+    'https://indian-festival-api.vercel.app/api/festivals?date=' +
+    encodeURIComponent(date);
+
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error('Festival source returned ' + response.status);
+  }
+
+  const payload = await response.json();
+  const items = Array.isArray(payload)
+    ? payload
+    : (payload.data || payload.festivals || payload.results || []);
+
+  // Only accept entries explicitly matching the date requested.
+  const matches = items.filter(item => {
+    const listedDate = item.date || item.date_2026 || item.date_iso;
+    return listedDate === date;
+  });
+
+  return { date, matches };
+}
+
+async function answerFestivalQuestion() {
+  const status = addMessage(
+    '⚡ Checking the festival calendar for today in India...',
+    'assistant'
+  );
+
+  try {
+    const result = await getFestivalsForToday();
+    const readableDate = getIndiaDate().toLocaleDateString('en-IN', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    if (result.matches.length) {
+      const names = result.matches.map(item => {
+        const description = item.description ? ' — ' + item.description : '';
+        const region = Array.isArray(item.states) &&
+          !item.states.includes('all')
+          ? ' (regional)'
+          : '';
+        return (item.name || 'Festival') + region + description;
+      });
+
+      status.textContent =
+        'Festival calendar entries for ' + readableDate + ':\n\n' +
+        names.join('\n\n') +
+        '\n\nSource: Indian Festival API\n' +
+        'Please verify regional observances with a local calendar.';
+      return;
+    }
+
+    status.textContent =
+      'The festival calendar did not return a verified entry for ' +
+      readableDate + '. That does NOT prove there are no festivals today. ' +
+      'I will search the web for additional information.';
+
+    const results = await getWebResults(
+      'Indian festivals today ' + readableDate + ' India festival calendar'
+    );
+
+    if (results.length) {
+      addSearchResults(
+        'Web results for festivals on ' + readableDate + '. Check the dates and regional details in each source.',
+        results
+      );
+    } else {
+      addSearchResults('Search the web for current festival information:', [{
+        title: 'Google: festivals in India on ' + readableDate,
+        url: googleSearchUrl('Indian festivals today ' + readableDate),
+        snippet: 'The date-specific calendar did not provide a confirmed entry.'
+      }]);
+    }
+  } catch (error) {
+    console.warn('ASWIK festival lookup error:', error);
+
+    status.textContent =
+      'I could not verify today’s festivals from the festival calendar. ' +
+      'I will not guess a festival date. Check these current search results instead.';
+
+    try {
+      const results = await getWebResults(
+        'Indian festivals today ' + getIndiaDateString() + ' India'
+      );
+
+      if (results.length) {
+        addSearchResults(
+          'Possible sources for today’s festival information. Verify the date and region:',
+          results
+        );
+      } else {
+        throw new Error('No usable search results');
+      }
+    } catch {
+      addSearchResults('Open a live search for current festival information:', [{
+        title: 'Search Google for festivals in India today',
+        url: googleSearchUrl('Indian festivals today ' + getIndiaDateString()),
+        snippet: 'Check current results and regional calendars.'
+      }]);
+    }
+  }
+}
+
+// =============================================
+// 6. WIKIPEDIA REFERENCE FALLBACK
 // =============================================
 
 async function getOnlineKnowledge(question) {
@@ -209,80 +465,73 @@ async function getOnlineKnowledge(question) {
 
     const searchUrl =
       'https://en.wikipedia.org/w/rest.php/v1/search/page?q=' +
-      encodeURIComponent(searchTerm) +
-      '&limit=3';
+      encodeURIComponent(searchTerm) + '&limit=5';
 
     const searchResponse = await fetch(searchUrl);
-
-    if (!searchResponse.ok) {
-      throw new Error('Wikipedia search unavailable');
-    }
+    if (!searchResponse.ok) throw new Error('Wikipedia search unavailable');
 
     const searchData = await searchResponse.json();
     const pages = searchData.pages || [];
 
-    if (pages.length === 0) return null;
+    if (!pages.length) return null;
 
-    for (const page of pages) {
-      const title = page.key || page.title;
+    // Prefer a close title match rather than blindly choosing the first page.
+    const normalise = text => String(text || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9 ]/g, '')
+      .trim();
 
-      const summaryUrl =
-        'https://en.wikipedia.org/api/rest_v1/page/summary/' +
-        encodeURIComponent(title.replace(/ /g, '_'));
+    const wanted = normalise(searchTerm);
+    const page = pages.find(item =>
+      normalise(item.title) === wanted ||
+      normalise(item.key) === wanted
+    ) || pages[0];
 
-      const summaryResponse = await fetch(summaryUrl);
+    const title = page.key || page.title;
+    const summaryUrl =
+      'https://en.wikipedia.org/api/rest_v1/page/summary/' +
+      encodeURIComponent(title.replace(/ /g, '_'));
 
-      if (!summaryResponse.ok) continue;
+    const summaryResponse = await fetch(summaryUrl);
+    if (!summaryResponse.ok) return null;
 
-      const article = await summaryResponse.json();
+    const article = await summaryResponse.json();
 
-      if (
-        !article.extract ||
+    if (!article.extract ||
         article.type === 'disambiguation' ||
-        article.type === 'not_found'
-      ) {
-        continue;
-      }
-
-      const source =
-        article.content_urls?.desktop?.page ||
-        'https://en.wikipedia.org/wiki/' +
-        encodeURIComponent(title.replace(/ /g, '_'));
-
-      return article.extract +
-        '\n\nSource: Wikipedia — ' + article.title +
-        '\n' + source;
+        article.type === 'not_found') {
+      return null;
     }
 
-    return null;
+    return {
+      text: article.extract,
+      title: article.title,
+      url: article.content_urls?.desktop?.page ||
+        'https://en.wikipedia.org/wiki/' +
+        encodeURIComponent(title.replace(/ /g, '_'))
+    };
   } catch (error) {
-    console.warn('ASWIK online knowledge error:', error);
+    console.warn('ASWIK Wikipedia error:', error);
     return null;
   }
 }
 
 // =============================================
-// 6. MAIN BRAIN ROUTER — BRAIN LITE IS THE BOSS
+// 7. MAIN BRAIN ROUTER
 // =============================================
 
 async function sendMessage() {
   const value = messageInput ? messageInput.value.trim() : '';
-
   if (!value || busy) return;
 
   addMessage(value, 'user');
-
   if (messageInput) messageInput.value = '';
 
   busy = true;
-
-  const status = addMessage(
-    '⚡ Brain Lite is thinking...',
-    'assistant'
-  );
+  const status = addMessage('⚡ Brain Lite is thinking...', 'assistant');
 
   try {
-    // Layer 1: Brain Lite handles known questions.
+    // Layer 1: Instant known answers.
     const instantAnswer = instantBrain(value);
 
     if (instantAnswer !== null) {
@@ -290,21 +539,51 @@ async function sendMessage() {
       return;
     }
 
-    // Layer 2: Free online reference information.
-    status.textContent = '⚡ Searching online knowledge...';
+    // Layer 2: Current-date festival questions.
+    if (isFestivalQuestion(value)) {
+      // Remove the temporary status bubble before showing the festival answer.
+      status.textContent = '⚡ Preparing the date-specific festival lookup...';
+      await answerFestivalQuestion();
+      return;
+    }
 
-    const onlineAnswer = await getOnlineKnowledge(value);
+    // Layer 3: Search the web for broader coverage.
+    status.textContent = '⚡ Searching the web for relevant sources...';
 
-    if (onlineAnswer) {
-      status.textContent = onlineAnswer;
+    try {
+      const results = await getWebResults(value);
+
+      if (results.length) {
+        status.textContent =
+          'I found web results, but I cannot guarantee every snippet answers your question. Check the sources below.';
+
+        addSearchResults('Relevant web results for your question:', results);
+        return;
+      }
+    } catch (error) {
+      console.warn('Web search fallback:', error);
+    }
+
+    // Layer 4: Wikipedia reference information if web search fails.
+    status.textContent = '⚡ Checking Wikipedia reference information...';
+
+    const article = await getOnlineKnowledge(value);
+
+    if (article) {
+      status.textContent = article.text + '\n\nSource: Wikipedia — ' +
+        article.title + '\n' + article.url;
     } else {
       status.textContent =
-        'I could not find a suitable Wikipedia article for that question. ' +
-        'Try rephrasing it or use Live Web Search for more results.';
+        'I could not retrieve a reliable answer automatically. ' +
+        'Try Live Web Search or use the Google link below.';
+      addSearchResults('Search the web for your question:', [{
+        title: 'Search Google for: ' + value,
+        url: googleSearchUrl(value),
+        snippet: 'Open Google to find more sources.'
+      }]);
     }
   } catch (error) {
     console.error('ASWIK Brain Lite error:', error);
-
     status.textContent =
       'Something went wrong while processing your question. ' +
       'Please check your internet connection and try again.';
@@ -314,7 +593,7 @@ async function sendMessage() {
 }
 
 // =============================================
-// 7. SEND BUTTON AND ENTER KEY
+// 8. SEND BUTTON AND ENTER KEY
 // =============================================
 
 if (sendBtn) {
@@ -331,7 +610,7 @@ if (messageInput) {
 }
 
 // =============================================
-// 8. ABOUT DEVELOPER
+// 9. ABOUT DEVELOPER
 // =============================================
 
 const aboutDialog = document.getElementById('aboutDialog');
@@ -339,25 +618,19 @@ const aboutBtn = document.getElementById('aboutBtn');
 const closeAbout = document.getElementById('closeAbout');
 
 if (aboutDialog && aboutBtn) {
-  aboutBtn.addEventListener('click', () => {
-    aboutDialog.showModal();
-  });
+  aboutBtn.addEventListener('click', () => aboutDialog.showModal());
 }
 
 if (aboutDialog && closeAbout) {
-  closeAbout.addEventListener('click', () => {
-    aboutDialog.close();
-  });
+  closeAbout.addEventListener('click', () => aboutDialog.close());
 }
 
 // =============================================
-// 9. SERVICE WORKER
+// 10. SERVICE WORKER
 // =============================================
 
-if (
-  'serviceWorker' in navigator &&
-  location.protocol.startsWith('http')
-) {
+if ('serviceWorker' in navigator &&
+    location.protocol.startsWith('http')) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch(error => {
       console.warn('Service worker registration failed:', error);
