@@ -45,6 +45,25 @@ function instantBrain(input) {
     return 'I am ASWIK AI, a personal assistant created by Aswik Singh. My Brain Lite system handles quick commands, with a compact language model available when your device supports it.';
   }
 
+  // Date — recognize different ways of asking
+  if (
+    /\b(date|day)\b/.test(q) ||
+    /\b(today|today's|current date|what day is it)\b/.test(q)
+  ) {
+    const asksDate =
+      /\b(date|day|today|today's|current date)\b/.test(q) &&
+      /\b(what|today|date|day|is|tell|current)\b/.test(q);
+
+    if (asksDate) {
+      return 'Today is ' + new Date().toLocaleDateString('en-IN', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      }) + '. ⚡';
+    }
+  }
+
   // Capabilities
   if (/^(what can you do|help|your features|what are your features)$/.test(q)) {
     return 'I can answer quick questions, tell you the date and time, calculate simple arithmetic, and open web search results. When a compatible AI model is available, I can also handle more open-ended conversations.';
