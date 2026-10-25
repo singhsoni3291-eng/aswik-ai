@@ -12,66 +12,43 @@ const searchInput = document.getElementById('searchInput');
 const messageInput = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
 
-const MODEL_ID = 'Llama-3.2-1B-Instruct-q4f16_1-MLC';
-
-let engine = null;
-let enginePromise = null;
 let busy = false;
-
-const conversation = [{
-  role: 'system',
-  content:
-    'You are ASWIK AI, created by Aswik Singh. ' +
-    'Be friendly, accurate, helpful, and clear. ' +
-    'Do not invent facts or claim to have retrieved live information ' +
-    'unless it has actually been retrieved.'
-}];
 
 // =============================================
 // 1. INSTANT BRAIN
 // =============================================
 
 function instantBrain(input) {
- 
   const q = input.trim().toLowerCase()
     .replace(/\bthedate\b/g, 'the date')
     .replace(/[?!.,]+$/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 
-
-  // Greetings, including "hello from my PC"
-  if (
-    /^(hi|hello|hey|hii+|heyy+|namaste|good morning|good afternoon|good evening)(\s+(there|from my pc|from my phone))?$/.test(q)
-  ) {
+  // Greetings
+  if (/^(hi|hello|hey|hii+|heyy+|namaste|good morning|good afternoon|good evening)(\s+(there|from my pc|from my phone))?$/.test(q)) {
     return 'Hello! ⚡ I am ASWIK AI, ready to help. What shall we do today?';
   }
 
   // Developer identity
-  if (
-    /\b(who (made|created|developed|built) (you|aswik ai)|who is your (creator|developer)|who made aswik ai|who created aswik ai)\b/.test(q)
-  ) {
+  if (/\b(who (made|created|developed|built) (you|aswik ai)|who is your (creator|developer)|who made aswik ai|who created aswik ai)\b/.test(q)) {
     return 'I was created and developed by Aswik Singh. ⚡ Welcome to ASWIK AI!';
   }
 
   // Identity
-  if (
-    /^(who are you|what are you|introduce yourself|tell me about yourself)$/.test(q)
-  ) {
-    return 'I am ASWIK AI, a personal assistant created by Aswik Singh. My Brain Lite system answers quick questions and can retrieve free online reference information.';
+  if (/^(who are you|what are you|introduce yourself|tell me about yourself)$/.test(q)) {
+    return 'I am ASWIK AI, a personal assistant created by Aswik Singh. My Brain Lite system answers quick questions and retrieves free online reference information.';
   }
 
   // Capabilities
-  if (
-    /^(what can you do|help|your features|what are your features)$/.test(q)
-  ) {
-    return 'I can answer quick questions, tell you the date and time, calculate simple arithmetic, search online reference information, and open Google search results. A compact AI model may also work on compatible devices.';
+  if (/^(what can you do|help|your features|what are your features)$/.test(q)) {
+    return 'I can answer quick questions, tell you the date and time, calculate simple arithmetic, retrieve Wikipedia information, and open Google search results.';
   }
 
   // Current date
   if (
-    /\b(date|day)\b/.test(q) &&
-    /\b(what|today|date|day|is|tell|current|the)\b/.test(q) ||
+    (/\b(date|day)\b/.test(q) &&
+      /\b(what|today|date|day|is|tell|current|the)\b/.test(q)) ||
     /\b(today's date|todays date|current date|what day is it)\b/.test(q)
   ) {
     return 'Today is ' + new Date().toLocaleDateString('en-IN', {
@@ -83,9 +60,7 @@ function instantBrain(input) {
   }
 
   // Current time
-  if (
-    /\b(what time is it|current time|tell me the time|what is the time|what's the time|time right now)\b/.test(q)
-  ) {
+  if (/\b(what time is it|current time|tell me the time|what is the time|what's the time|time right now)\b/.test(q)) {
     return 'The current local time is ' +
       new Date().toLocaleTimeString('en-IN', {
         hour: '2-digit',
@@ -94,7 +69,7 @@ function instantBrain(input) {
       }) + '. ⚡';
   }
 
-  // Simple arithmetic: 12 + 5, 8 / 2, calculate 6 * 7
+  // Simple arithmetic
   const mathText = q.match(
     /^(?:(?:what is|calculate|solve)\s+)?(-?\d+(?:\.\d+)?)\s*([+\-*/×÷])\s*(-?\d+(?:\.\d+)?)$/
   );
@@ -123,7 +98,6 @@ function instantBrain(input) {
     return 'You are welcome! ⚡ I am always ready to help.';
   }
 
-  // Unknown question: let the next brain layer handle it.
   return null;
 }
 
@@ -190,8 +164,7 @@ function searchWeb(query) {
   addMessage(q, 'user');
 
   addMessage(
-    'Opening Google results for your question. ' +
-    'Check the results for current information.',
+    'Opening Google results for your question. Check the results for current information.',
     'assistant'
   );
 
@@ -234,7 +207,6 @@ async function getOnlineKnowledge(question) {
 
     if (!searchTerm) return null;
 
-    // Search for a relevant Wikipedia article.
     const searchUrl =
       'https://en.wikipedia.org/w/rest.php/v1/search/page?q=' +
       encodeURIComponent(searchTerm) +
@@ -251,7 +223,6 @@ async function getOnlineKnowledge(question) {
 
     if (pages.length === 0) return null;
 
-    // Try the best search result first, then alternatives.
     for (const page of pages) {
       const title = page.key || page.title;
 
@@ -291,44 +262,7 @@ async function getOnlineKnowledge(question) {
 }
 
 // =============================================
-// 6. OPTIONAL COMPACT AI MODEL
-// =============================================
-
-async function getEngine(status) {
-  if (engine) return engine;
-
-  if (!navigator.gpu) {
-    throw new Error('WebGPU is unavailable');
-  }
-
-  if (!enginePromise) {
-    enginePromise = (async () => {
-      status.textContent = 'Loading compact AI engine...';
-
-      const webllm = await import(
-        'https://esm.run/@mlc-ai/web-llm'
-      );
-
-      return await webllm.CreateMLCEngine(MODEL_ID, {
-        initProgressCallback: progress => {
-          status.textContent =
-            progress.text || 'Preparing the AI model...';
-        }
-      });
-    })().then(result => {
-      engine = result;
-      return result;
-    }).catch(error => {
-      enginePromise = null;
-      throw error;
-    });
-  }
-
-  return enginePromise;
-}
-
-// =============================================
-// 7. MAIN BRAIN ROUTER
+// 6. MAIN BRAIN ROUTER — BRAIN LITE IS THE BOSS
 // =============================================
 
 async function sendMessage() {
@@ -337,16 +271,18 @@ async function sendMessage() {
   if (!value || busy) return;
 
   addMessage(value, 'user');
-  messageInput.value = '';
+
+  if (messageInput) messageInput.value = '';
+
   busy = true;
 
   const status = addMessage(
-    'ASWIK Brain Lite is checking...',
+    '⚡ Brain Lite is thinking...',
     'assistant'
   );
 
   try {
-    // Layer 1: instant answers.
+    // Layer 1: Brain Lite handles known questions.
     const instantAnswer = instantBrain(value);
 
     if (instantAnswer !== null) {
@@ -354,53 +290,8 @@ async function sendMessage() {
       return;
     }
 
-    // Layer 2: optional local model.
-    // Failure here must not prevent online knowledge from working.
-    if (navigator.gpu) {
-      try {
-        const ai = await getEngine(status);
-
-        status.textContent = 'ASWIK AI is thinking...';
-
-        const messages = [
-          conversation[0],
-          ...conversation.slice(-10),
-          { role: 'user', content: value }
-        ];
-
-        const result = await ai.chat.completions.create({
-          messages,
-          temperature: 0.6,
-          max_tokens: 256
-        });
-
-        const answer =
-          result.choices?.[0]?.message?.content?.trim();
-
-        if (answer) {
-          conversation.push(
-            { role: 'user', content: value },
-            { role: 'assistant', content: answer }
-          );
-
-          // Keep the history small.
-          if (conversation.length > 21) {
-            conversation.splice(1, conversation.length - 21);
-          }
-
-          status.textContent = answer;
-          return;
-        }
-      } catch (modelError) {
-        console.warn(
-          'Compact model unavailable; using online knowledge.',
-          modelError
-        );
-      }
-    }
-
-    // Layer 3: free online knowledge.
-    status.textContent = 'Searching free online knowledge...';
+    // Layer 2: Free online reference information.
+    status.textContent = '⚡ Searching online knowledge...';
 
     const onlineAnswer = await getOnlineKnowledge(value);
 
@@ -408,7 +299,7 @@ async function sendMessage() {
       status.textContent = onlineAnswer;
     } else {
       status.textContent =
-        'I could not find a suitable reference article for that question. ' +
+        'I could not find a suitable Wikipedia article for that question. ' +
         'Try rephrasing it or use Live Web Search for more results.';
     }
   } catch (error) {
@@ -423,7 +314,7 @@ async function sendMessage() {
 }
 
 // =============================================
-// 8. SEND BUTTON AND ENTER KEY
+// 7. SEND BUTTON AND ENTER KEY
 // =============================================
 
 if (sendBtn) {
@@ -440,7 +331,7 @@ if (messageInput) {
 }
 
 // =============================================
-// 9. ABOUT DEVELOPER
+// 8. ABOUT DEVELOPER
 // =============================================
 
 const aboutDialog = document.getElementById('aboutDialog');
@@ -460,7 +351,7 @@ if (aboutDialog && closeAbout) {
 }
 
 // =============================================
-// 10. SERVICE WORKER
+// 9. SERVICE WORKER
 // =============================================
 
 if (
