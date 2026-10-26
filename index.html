@@ -1,73 +1,130 @@
+
 <!doctype html>
 <html lang="en">
 <head>
-  <meta name="google-site-verification" content="-8IGLJrepwo_l-O96Y85nc-kBkljuyUCW2CFiIV9Rlg" />
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#06131b">
-<meta name="description" content="ASWIK AI — a mobile-ready assistant interface by Aswik Singh">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
-<title>ASWIK AI</title>
-<link rel="stylesheet" href="styles.css">
+  <meta name="google-site-verification" content="-8IGLJrepwo_l-O96Y85nc-kBkljuyUCW2CFiIV9Rlg">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#06131b">
+  <meta name="description" content="ASWIK AI — a smart personal digital assistant created by Aswik Singh, featuring knowledge retrieval, live web search, and intelligent conversation.">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <title>ASWIK AI — Personal AI System</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <div class="app-shell">
   <header class="topbar">
     <div class="brand-mark" aria-hidden="true"><span></span></div>
-    <div class="brand-copy"><div class="eyebrow">PERSONAL AI SYSTEM</div><h1>ASWIK <span>AI</span></h1></div>
-    <button id="aboutBtn" class="icon-btn" aria-label="About developer" title="About developer">ⓘ</button>
+    <div class="brand-copy">
+      <div class="eyebrow">PERSONAL AI SYSTEM</div>
+      <h1>ASWIK <span>AI</span></h1>
+    </div>
+    <button id="aboutBtn" class="icon-btn"
+      aria-label="About developer" title="About developer">ⓘ</button>
   </header>
+
   <main>
-    <section class="reactor-card">
-      <div class="reactor-ring ring-a"></div><div class="reactor-ring ring-b"></div><div class="reactor-ring ring-c"></div>
+    <section class="reactor-card" aria-label="ASWIK system status">
+      <div class="reactor-ring ring-a"></div>
+      <div class="reactor-ring ring-b"></div>
+      <div class="reactor-ring ring-c"></div>
       <div class="reactor-core"><div class="core-inner"></div></div>
-      <div class="reactor-caption"><span class="live-dot"></span> SYSTEM ONLINE <span id="clock">--:--</span></div>
+      <div class="reactor-caption">
+        <span class="live-dot"></span>
+        SYSTEM ONLINE
+        <span id="clock">--:--</span>
+      </div>
     </section>
+
     <section class="welcome">
-      <p class="eyebrow">YOUR ASSISTANT</p>
-      <h2>Ready when<br><span>you are.</span></h2>
-      <p class="subcopy">A mobile-ready ASWIK AI interface. Search the web, check the time, and keep your chat history on this device.</p>
+      <p class="eyebrow">YOUR PERSONAL ASSISTANT</p>
+      <h2>Think smarter.<br><span>Explore further.</span></h2>
+      <p class="subcopy">
+        Meet ASWIK Lite — your digital assistant for exploring knowledge,
+        understanding questions, discovering current information, and
+        getting useful answers.
+      </p>
     </section>
+
     <section id="chat" class="chat" aria-live="polite">
-      <div class="message assistant"><div class="avatar">A</div><div class="bubble"><strong>ASWIK AI</strong><p>
-Welcome to ASWIK AI ⚡
+      <div class="message assistant">
+        <div class="avatar">A</div>
+        <div class="bubble">
+          <strong>ASWIK AI</strong>
+          <p>Welcome to ASWIK AI ⚡
 
-Your personal digital assistant, created by Aswik Singh.
+I'm ASWIK Lite, your personal digital assistant, created by Aswik Singh.
 
-Explore knowledge, discover recent news, check Indian festival dates, and search online sources — all through one futuristic interface.
+I can retrieve knowledge, look up news, help explore Indian festival dates,
+check the current date and time, and help you find useful online sources.
 
-Ask your first question to begin.
-</p></div></div>
+Ask me a question to get started. For current events, I'll use available
+information sources rather than pretend I already know live updates.</p>
+        </div>
+      </div>
     </section>
+
     <section class="search-panel">
-      <div class="panel-title"><span class="search-glyph">⌕</span><div><strong>Live web search</strong><small>Opens current web results in your browser</small></div></div>
+      <div class="panel-title">
+        <span class="search-glyph">⌕</span>
+        <div>
+          <strong>Live web search</strong>
+          <small>Open current information and sources in your browser</small>
+        </div>
+      </div>
+
       <form id="searchForm" class="search-form">
-        <input id="searchInput" type="search" placeholder="Search current news or festivals…" autocomplete="off">
+        <input id="searchInput" type="search"
+          placeholder="Search current news or festivals…"
+          autocomplete="off">
         <button type="submit" class="primary-btn">Search</button>
       </form>
+
       <div class="quick-searches">
-        <button data-query="Which festival is today in India?">Today's festival in India</button>
-        <button data-query="Latest news in India today">Latest India news</button>
+        <button data-query="Which festival is today in India?">
+          Today's festival in India
+        </button>
+        <button data-query="Latest news in India today">
+          Latest India news
+        </button>
       </div>
     </section>
+
     <section class="composer-panel">
-      <label for="messageInput">CHAT</label>
+      <label for="messageInput">CHAT WITH ASWIK</label>
       <div class="composer">
-        <textarea id="messageInput" rows="1" placeholder="Type a message…"></textarea>
-        <button id="sendBtn" class="send-btn" aria-label="Send message">↑</button>
+        <textarea id="messageInput" rows="1"
+          placeholder="Ask ASWIK anything…"></textarea>
+        <button id="sendBtn" class="send-btn"
+          aria-label="Send message">↑</button>
       </div>
-      <p class="disclaimer">This starter does not yet include an AI model. Use web search for current information.</p>
+      <p class="disclaimer">
+        ASWIK Lite uses lightweight JavaScript logic and online knowledge
+        retrieval. Live information requires internet access. A trained
+        generative language model is not currently active.
+      </p>
     </section>
   </main>
-  <footer>ASWIK AI <span>•</span> DEVELOPED BY ASWIK SINGH</footer>
+
+  <footer>ASWIK AI <span>•</span> CREATED BY ASWIK SINGH</footer>
 </div>
+
 <dialog id="aboutDialog">
-  <div class="dialog-head"><div class="brand-mark small"><span></span></div><button id="closeAbout" class="icon-btn" aria-label="Close">✕</button></div>
-  <p class="eyebrow">ABOUT THE DEVELOPER</p><h2>Aswik Singh</h2>
+  <div class="dialog-head">
+    <div class="brand-mark small"><span></span></div>
+    <button id="closeAbout" class="icon-btn" aria-label="Close">✕</button>
+  </div>
+  <p class="eyebrow">ABOUT THE DEVELOPER</p>
+  <h2>Aswik Singh</h2>
   <p>Creator and developer of ASWIK AI.</p>
-  <p class="subcopy">This is a mobile web starter for the ASWIK AI project. The local AI engine can be integrated in a later build.</p>
+  <p class="subcopy">
+    ASWIK AI is an evolving personal assistant project focused on
+    accessible technology, knowledge retrieval, and a futuristic
+    digital-assistant experience.
+  </p>
 </dialog>
+
 <script src="app.js"></script>
 </body>
 </html>
