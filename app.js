@@ -1,4 +1,5 @@
-
+const ASWIK_AI_ENDPOINT =
+  "https://ancient-pond-adc4.singhsoni3291.workers.dev";
 /*
 =========================================================
  ASWIK AI — SMART BRAIN ENGINE 3.0
