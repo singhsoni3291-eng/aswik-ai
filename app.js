@@ -1,16 +1,16 @@
 
 /*
 =========================================================
- ASWIK AI — SMART BRAIN ENGINE 4.0
+ ASWIK AI — SMART BRAIN ENGINE 4.1
  Developer: Aswik Singh
 
  Features:
- - Connected Hugging Face language model via Cloudflare Worker
+ - Hugging Face AI through Cloudflare Worker
  - No API token exposed in browser code
  - Cyan futuristic chat interface
  - India date and time
  - Arithmetic and reasoning
- - Wikipedia retrieval as a backup
+ - Wikipedia retrieval as a relevant backup only
  - News retrieval
  - Indian festival search assistance
  - Thinking animation
@@ -31,7 +31,7 @@ const ASWIK_AI_ENDPOINT =
 const ASWIK = {
   name: "ASWIK AI",
   developer: "Aswik Singh",
-  version: "4.0",
+  version: "4.1",
 
   wikipediaSearch:
     "https://en.wikipedia.org/w/rest.php/v1/search/page",
@@ -50,7 +50,7 @@ const ASWIK = {
       "https://news.google.com/rss/search?q=AI+technology+when%3A1d&hl=en-IN&gl=IN&ceid=IN%3Aen"
   },
 
-  timeout: 20000,
+  timeout: 25000,
   maxHistory: 30,
   maxNews: 7
 };
@@ -164,10 +164,13 @@ function installChatStyles() {
       color: #d5f7ff;
     }
 
-    #chat .message-content code {
+    #chat .message-content code,
+    #chat .message-content pre {
       background: rgba(0, 0, 0, .25);
       padding: 2px 5px;
       border-radius: 4px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
     }
 
     #chat .aswik-list-item {
@@ -273,6 +276,8 @@ function formatAnswer(text) {
   const lines = String(text ?? "").split(/\r?\n/);
   const output = [];
   let inList = false;
+  let inCode = false;
+  let codeLines = [];
 
   function closeList() {
     if (inList) {
@@ -283,16 +288,41 @@ function formatAnswer(text) {
 
   function inlineFormat(value) {
     let s = escapeHTML(value);
-
     s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
     s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
     s = s.replace(/(^|[^*])\*([^*]+)\*/g, "$1<em>$2</em>");
-
     return s;
+  }
+
+  function flushCode() {
+    output.push(
+      "<pre><code>" +
+      escapeHTML(codeLines.join("\n")) +
+      "</code></pre>"
+    );
+    codeLines = [];
   }
 
   for (const line of lines) {
     const trimmed = line.trim();
+
+    if (trimmed.startsWith("```")) {
+      closeList();
+
+      if (inCode) {
+        flushCode();
+        inCode = false;
+      } else {
+        inCode = true;
+      }
+
+      continue;
+    }
+
+    if (inCode) {
+      codeLines.push(line);
+      continue;
+    }
 
     if (!trimmed) {
       closeList();
@@ -337,6 +367,9 @@ function formatAnswer(text) {
   }
 
   closeList();
+
+  if (inCode) flushCode();
+
   return output.join("");
 }
 
@@ -519,7 +552,7 @@ function updateClock() {
 }
 
 /* =======================================================
-   6. IDENTITY AND INSTANT ANSWERS
+   6. INSTANT ANSWERS
 ======================================================= */
 
 function answerInstant(question) {
@@ -527,7 +560,7 @@ function answerInstant(question) {
   const current = indiaDateTime();
 
   if (/^(hi|hello|hey|hii|heyy|namaste|yo)\b/.test(q)) {
-    return "Heyyy! ⚡ I'm ASWIK AI, created by Aswik Singh. Ask me a question and let's explore it together!";
+    return "Heyyy! ⚡ I'm ASWIK AI, created by Aswik Singh. Ask me anything and let's explore it together!";
   }
 
   if (containsAny(q, [
@@ -538,7 +571,7 @@ function answerInstant(question) {
     "who designed you",
     "who is your developer"
   ])) {
-    return "I am **ASWIK AI**, designed and developed by **Aswik Singh**. ⚡ I combine programmed tools with a connected language model for general questions. Online AI features require an internet connection.";
+    return "I am **ASWIK AI**, designed and developed by **Aswik Singh**. ⚡ I use programmed tools and a connected language model for general questions.";
   }
 
   if (containsAny(q, [
@@ -560,7 +593,7 @@ function answerInstant(question) {
     q.includes("who are you") ||
     q.includes("introduce yourself")
   ) {
-    return "I'm **ASWIK AI**, a digital assistant created by **Aswik Singh**. I can help with questions, calculations, explanations, writing, programming, and online information retrieval.";
+    return "I'm **ASWIK AI**, a digital assistant created by **Aswik Singh**. I can help with explanations, maths, writing, programming, and online information retrieval.";
   }
 
   if (
@@ -593,15 +626,15 @@ function answerInstant(question) {
     return [
       "## ASWIK AI capabilities",
       "",
-      "- Answer general questions using the connected language model.",
-      "- Help with schoolwork, science, maths, and programming.",
-      "- Help write and explain code.",
-      "- Retrieve Wikipedia summaries as a backup.",
-      "- Retrieve news when a public feed is accessible.",
-      "- Find online festival-calendar sources.",
-      "- Show the date and time in India.",
+      "- General questions through the connected language model.",
+      "- Schoolwork, science, maths, and programming.",
+      "- Code writing and explanations.",
+      "- Wikipedia summaries when relevant.",
+      "- Recent news from accessible public feeds.",
+      "- Indian festival search assistance.",
+      "- Current date and time in India.",
       "",
-      "The online language model requires an internet connection and an available inference service."
+      "The online AI brain needs an internet connection and an available inference provider."
     ].join("\n");
   }
 
@@ -610,14 +643,14 @@ function answerInstant(question) {
     q.includes("are you an llm") ||
     q.includes("are you a language model")
   ) {
-    return "I'm **ASWIK AI**, created by **Aswik Singh**. This website connects its programmed tools to a hosted language model for general-purpose responses when the online service is available.";
+    return "I'm **ASWIK AI**, created by **Aswik Singh**. This website connects programmed tools to a hosted language model for general-purpose responses when the service is available.";
   }
 
   return null;
 }
 
 /* =======================================================
-   7. REASONING AND CLOCK ANGLES
+   7. REASONING
 ======================================================= */
 
 function answerReasoning(question) {
@@ -641,24 +674,23 @@ function answerReasoning(question) {
     return "**12 months.** Every month has at least 28 days.";
   }
 
-  // Bat-and-ball puzzle: supports rupees and dollars.
   if (
     q.includes("bat") &&
     q.includes("ball") &&
     (
       q.includes("110") ||
-      q.includes("1.10") ||
-      q.includes("$1.10")
+      q.includes("1.10")
     ) &&
     (
       q.includes("100 more") ||
-      q.includes("1 more") ||
-      q.includes("$1 more")
+      q.includes("1 more")
     )
   ) {
-    const isRupees = q.includes("₹") || q.includes("rupee");
-
-    if (isRupees) {
+    if (
+      q.includes("₹") ||
+      q.includes("rupee") ||
+      q.includes("rupees")
+    ) {
       return [
         "The ball costs **₹5** and the bat costs **₹105**.",
         "",
@@ -667,7 +699,7 @@ function answerReasoning(question) {
         "Together: x + (x + 100) = 110.",
         "So 2x = 10, which gives x = 5.",
         "",
-        "Check: ₹5 + ₹105 = ₹110, and the bat costs ₹100 more."
+        "Check: ₹5 + ₹105 = ₹110."
       ].join("\n");
     }
 
@@ -683,7 +715,6 @@ function answerReasoning(question) {
     ].join("\n");
   }
 
-  // Clock angle.
   const clockMatch = q.match(/\b(\d{1,2})\s*:\s*(\d{2})\b/);
 
   if (
@@ -699,34 +730,8 @@ function answerReasoning(question) {
       const difference = Math.abs(hourAngle - minuteAngle);
       const angle = Math.min(difference, 360 - difference);
 
-      return [
-        "The smaller angle is **" + angle + "°**.",
-        "",
-        "Minute-hand angle = " + minute + " × 6° = " + minuteAngle + "°.",
-        "Hour-hand angle = (" + (hour % 12) + " × 30°) + (" + minute + " × 0.5°) = " + hourAngle + "°.",
-        "Smaller angle = **" + angle + "°**."
-      ].join("\n");
-    }
-  }
-
-  // Constant-difference sequences.
-  const sequenceMatch = q.match(
-    /(?:sequence|series|next number|what comes next)\D*((?:-?\d+(?:\.\d+)?\s*,\s*){2,}-?\d+(?:\.\d+)?)/
-  );
-
-  if (sequenceMatch) {
-    const nums = sequenceMatch[1].split(",").map(Number);
-    const differences = nums.slice(1).map((n, i) => n - nums[i]);
-
-    if (
-      differences.length &&
-      differences.every(n => Math.abs(n - differences[0]) < 1e-10)
-    ) {
-      const next = nums[nums.length - 1] + differences[0];
-
-      return "A likely next number is **" + next +
-        "**, assuming a constant difference of " +
-        differences[0] + ". Other patterns may also be possible.";
+      return "The smaller angle at " + clockMatch[0] +
+        " is **" + angle + "°**.";
     }
   }
 
@@ -734,7 +739,7 @@ function answerReasoning(question) {
 }
 
 /* =======================================================
-   8. SAFE ARITHMETIC PARSER
+   8. SAFE ARITHMETIC
 ======================================================= */
 
 function solveMath(question) {
@@ -745,7 +750,6 @@ function solveMath(question) {
     .replace(/\bcalculate\b/g, "")
     .replace(/\bcompute\b/g, "")
     .replace(/\bsolve\b/g, "")
-    .replace(/\banswer\b/g, "")
     .replace(/\bmultiplied by\b/g, "*")
     .replace(/\bdivided by\b/g, "/")
     .replace(/\bplus\b/g, "+")
@@ -757,8 +761,9 @@ function solveMath(question) {
     .replace(/[?=]/g, " ")
     .trim();
 
-  if (!expression) return null;
-  if (!/^[\d\s.+\-*/%()]+$/.test(expression)) return null;
+  if (!expression || !/^[\d\s.+\-*/%()]+$/.test(expression)) {
+    return null;
+  }
 
   const tokens = expression.match(/\d+(?:\.\d+)?|\.\d+|[()+\-*/%]/g);
 
@@ -848,7 +853,7 @@ function solveMath(question) {
 }
 
 /* =======================================================
-   9. BUILT-IN CONCEPTS
+   9. CONCEPTS
 ======================================================= */
 
 const CONCEPTS = [
@@ -870,7 +875,7 @@ const CONCEPTS = [
   {
     id: "ai",
     keys: ["what is artificial intelligence", "define artificial intelligence", "what is ai", "define ai"],
-    answer: "## Artificial Intelligence\n\nArtificial intelligence (AI) is the field of building computer systems that perform tasks associated with human intelligence, such as understanding language, recognising patterns, solving problems, and making predictions."
+    answer: "**Artificial intelligence (AI)** is the field of building computer systems that perform tasks associated with human intelligence, such as understanding language, recognising patterns, solving problems, and making predictions."
   },
   {
     id: "ml",
@@ -900,7 +905,7 @@ const CONCEPTS = [
   {
     id: "css",
     keys: ["what is css", "define css"],
-    answer: "**CSS** stands for Cascading Style Sheets. It controls the appearance of web pages, including colours, layouts, spacing, fonts, and animations."
+    answer: "**CSS** stands for Cascading Style Sheets. It controls web page appearance, including colours, layouts, spacing, fonts, and animations."
   },
   {
     id: "api",
@@ -918,11 +923,6 @@ const CONCEPTS = [
     answer: "**Generative AI** produces content such as text, images, audio, or code based on patterns learned during training."
   },
   {
-    id: "internet",
-    keys: ["what is the internet", "define internet"],
-    answer: "The **internet** is a worldwide network of connected computer networks. The web, email, and many other services use it."
-  },
-  {
     id: "photosynthesis",
     keys: ["what is photosynthesis", "define photosynthesis"],
     answer: "**Photosynthesis** is the process by which plants, algae, and some bacteria use light energy to convert carbon dioxide and water into energy-rich sugars. Oxygen is released during the common form of photosynthesis."
@@ -937,38 +937,27 @@ const CONCEPTS = [
 function answerConcept(question) {
   const q = cleanQuestion(question);
 
-  const asksComparison =
-    containsAny(q, ["difference", "different", "compare", "vs", "versus"]) &&
+  if (
+    containsAny(q, ["difference", "different", "compare", " vs ", "versus"]) &&
     q.includes("artificial intelligence") &&
     q.includes("machine learning") &&
-    q.includes("deep learning");
-
-  if (asksComparison) {
+    q.includes("deep learning")
+  ) {
     return CONCEPTS.find(c => c.id === "ai-ml-dl").answer;
   }
 
   const concepts = CONCEPTS
     .filter(c => c.id !== "ai-ml-dl")
     .sort((a, b) => {
-      const aLength = Math.max(0, ...a.keys.map(k => k.length));
-      const bLength = Math.max(0, ...b.keys.map(k => k.length));
-      return bLength - aLength;
+      const al = Math.max(0, ...a.keys.map(k => k.length));
+      const bl = Math.max(0, ...b.keys.map(k => k.length));
+      return bl - al;
     });
 
   for (const concept of concepts) {
     for (const key of concept.keys) {
-      if (q === key || q.includes(key)) {
-        return concept.answer;
-      }
+      if (q === key || q.includes(key)) return concept.answer;
     }
-  }
-
-  if (
-    q.includes("artificial intelligence") &&
-    q.includes("machine learning") &&
-    q.includes("deep learning")
-  ) {
-    return CONCEPTS.find(c => c.id === "ai-ml-dl").answer;
   }
 
   return null;
@@ -999,7 +988,7 @@ async function fetchTimed(url, options = {}) {
 }
 
 /* =======================================================
-   11. WIKIPEDIA RETRIEVAL — BACKUP ONLY
+   11. WIKIPEDIA BACKUP
 ======================================================= */
 
 async function wikipediaResults(query) {
@@ -1093,13 +1082,15 @@ async function answerWikipedia(question) {
     }))
     .sort((a, b) => b.score - a.score);
 
-  if (ranked[0].score < 3) return null;
+  // Require a strong title match to avoid unrelated articles.
+  if (ranked[0].score < 7) return null;
 
   const summary = await wikipediaSummary(ranked[0].key);
   if (!summary.extract) return null;
 
   return {
-    text: "**" + summary.title + "**\n\n" +
+    text:
+      "**" + summary.title + "**\n\n" +
       summary.extract +
       "\n\n*Source: Wikipedia. Verify important information with additional sources.*",
 
@@ -1192,18 +1183,14 @@ function getNewsTopic(question) {
     "world news",
     "global news",
     "international news"
-  ])) {
-    return "world";
-  }
+  ])) return "world";
 
   if (containsAny(q, [
     "technology news",
     "tech news",
     "ai news",
     "artificial intelligence news"
-  ])) {
-    return "technology";
-  }
+  ])) return "technology";
 
   return "india";
 }
@@ -1217,7 +1204,7 @@ async function answerNews(question) {
     const lines = [
       "## Recent " + topic + " news",
       "",
-      "These headlines were returned by the current news feed."
+      "Headlines returned by the current news feed:"
     ];
 
     articles.forEach((article, index) => {
@@ -1240,7 +1227,7 @@ async function answerNews(question) {
     console.error("News retrieval failed:", error);
 
     return {
-      text: "I couldn't retrieve verified headlines right now. You can open these live search pages instead.",
+      text: "I couldn't retrieve headlines right now. Use these links to search current news.",
       links: [
         { label: "Latest Indian news", url: googleURL("latest Indian news") },
         { label: "Latest world news", url: googleURL("latest world news") },
@@ -1251,7 +1238,7 @@ async function answerNews(question) {
 }
 
 /* =======================================================
-   13. INDIAN FESTIVAL ASSISTANCE
+   13. FESTIVAL ASSISTANCE
 ======================================================= */
 
 function answerFestival(question) {
@@ -1266,20 +1253,20 @@ function answerFestival(question) {
       "",
       "Festival dates can depend on region, tradition, and lunar-calendar calculations. I won't guess a festival name without a reliable current calendar.",
       "",
-      "Open one of the search links to check current listings."
+      "Open a current calendar or search result below."
     ].join("\n"),
 
     links: [
       {
-        label: "Search Indian festivals for today",
+        label: "Indian festivals today",
         url: googleURL("Indian festivals today " + year + " " + current.date)
       },
       {
-        label: "Search Hindu calendar",
+        label: "Hindu calendar",
         url: googleURL("Hindu calendar festivals today India " + year)
       },
       {
-        label: "Indian government holiday calendar",
+        label: "Government holiday calendar",
         url: googleURL("site:gov.in India holiday calendar " + year)
       }
     ]
@@ -1287,7 +1274,7 @@ function answerFestival(question) {
 }
 
 /* =======================================================
-   14. QUESTION ROUTING HELPERS
+   14. QUESTION ROUTING
 ======================================================= */
 
 function isNewsQuestion(q) {
@@ -1326,11 +1313,7 @@ function isFactualQuestion(q) {
 
 function answerFallback(question) {
   return {
-    text: [
-      "I couldn't get a reliable answer from my available services.",
-      "",
-      "You can retry the AI connection or search for the topic online."
-    ].join("\n"),
+    text: "I couldn't get a reliable answer from my available services. You can retry the AI connection or search online.",
 
     links: [
       { label: "Search the web", url: googleURL(question) },
@@ -1344,19 +1327,16 @@ function answerFallback(question) {
 ======================================================= */
 
 async function askASWIKLanguageModel(question) {
-  // The current question is already in history, so exclude
-  // its last entry before sending the previous conversation.
   const history = ASWIK_STATE.history
     .slice(0, -1)
     .slice(-8)
     .map(item => ({
-      role: item.role === "ai" ? "assistant" : item.role,
-      content: String(item.text || "").slice(0, 1500)
-    }))
-    .filter(item =>
-      ["user", "assistant"].includes(item.role) &&
-      item.content.length > 0
-    );
+      role:
+        item.role === "ai" || item.role === "assistant"
+          ? "assistant"
+          : "user",
+      text: String(item.text || "").slice(0, 3000)
+    }));
 
   const response = await fetchTimed(ASWIK_AI_ENDPOINT, {
     method: "POST",
@@ -1372,13 +1352,22 @@ async function askASWIKLanguageModel(question) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
+    const reason =
+      data.details ||
+      data.error ||
+      "HTTP " + response.status;
+
     throw new Error(
-      data.error || "AI service returned HTTP " + response.status
+      "AI connection failed (" +
+      response.status + "): " + reason
     );
   }
 
-  if (typeof data.answer !== "string" || !data.answer.trim()) {
-    throw new Error("The AI returned an empty answer.");
+  if (
+    typeof data.answer !== "string" ||
+    !data.answer.trim()
+  ) {
+    throw new Error("The AI returned no answer.");
   }
 
   return data.answer.trim();
@@ -1403,62 +1392,60 @@ async function handleQuestion(question) {
     const q = cleanQuestion(original);
     let result = null;
 
-    // 1. Instant answers.
+    // Fast built-in answers.
     result = answerInstant(original);
 
-    // 2. Programmed reasoning.
+    // Reasoning puzzles.
     if (!result) {
       result = answerReasoning(original);
     }
 
-    // 3. Arithmetic.
+    // Arithmetic.
     if (!result) {
       result = solveMath(original);
     }
 
-    // 4. Built-in concepts.
+    // Concepts only when the question specifically matches.
     if (!result) {
       result = answerConcept(original);
     }
 
-    // 5. Dedicated news retrieval.
+    // Dedicated current-news retrieval.
     if (!result && isNewsQuestion(q)) {
       result = await answerNews(original);
     }
 
-    // 6. Dedicated festival assistance.
+    // Dedicated festival search assistance.
     if (!result && isFestivalQuestion(q)) {
       result = answerFestival(original);
     }
 
-    // 7. REAL AI BRAIN FIRST for all remaining questions.
+    // Ask the real language model for every other question.
     if (!result) {
       try {
         result = await askASWIKLanguageModel(original);
       } catch (error) {
         console.error("ASWIK language model failed:", error);
 
-        // Wikipedia is only a backup if the model is unavailable.
+        // Wikipedia is a restricted backup for factual queries only.
         if (isFactualQuestion(q)) {
           try {
             const wiki = await answerWikipedia(original);
-
-            if (wiki) {
-              result = wiki;
-            }
+            if (wiki) result = wiki;
           } catch (wikiError) {
             console.warn("Wikipedia backup failed:", wikiError);
           }
         }
 
-        // Never hide the fact that the model connection failed.
+        // Do not display irrelevant Wikipedia results or hide errors.
         if (!result) {
           result = {
             text:
-              "⚠️ **ASWIK AI could not reach its language model.**\n\n" +
-              error.message +
-              "\n\nCheck the Cloudflare Worker deployment, HF_TOKEN secret, " +
-              "and Hugging Face model availability.",
+              "⚠️ **ASWIK AI couldn't reach its language model.**\n\n" +
+              "The online AI service may be temporarily unavailable. " +
+              "Please try again shortly.\n\n" +
+              "Technical detail: " + error.message,
+
             links: [
               {
                 label: "Open ASWIK AI",
@@ -1470,18 +1457,22 @@ async function handleQuestion(question) {
       }
     }
 
-    // 8. Final fallback.
     if (!result) {
       result = answerFallback(original);
     }
 
-    if (typeof result === "string") {
-      addMessage(result, "ai");
-      remember("ai", result);
-    } else {
-      addMessage(result.text, "ai", result.links || []);
-      remember("ai", result.text);
-    }
+    const answerText =
+      typeof result === "string"
+        ? result
+        : (result.text || result.answer || "No answer was returned.");
+
+    const answerLinks =
+      typeof result === "string"
+        ? []
+        : (result.links || []);
+
+    addMessage(answerText, "ai", answerLinks);
+    remember("ai", answerText);
 
   } catch (error) {
     console.error("ASWIK Brain error:", error);
@@ -1557,7 +1548,6 @@ function initialiseASWIK() {
     });
   }
 
-  // Quick prompts.
   document.querySelectorAll("[data-query], [data-search]").forEach(button => {
     button.addEventListener("click", () => {
       const query =
@@ -1569,7 +1559,6 @@ function initialiseASWIK() {
     });
   });
 
-  // Search form.
   const searchForm = document.querySelector("#searchForm");
   const searchInput = document.querySelector("#searchInput");
 
@@ -1585,7 +1574,6 @@ function initialiseASWIK() {
     });
   }
 
-  // About Developer dialog.
   const aboutDialog = document.querySelector("#aboutDialog");
   const aboutButton = document.querySelector("#aboutBtn");
   const closeAbout = document.querySelector("#closeAbout");
@@ -1622,9 +1610,11 @@ function initialiseASWIK() {
 ======================================================= */
 
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initialiseASWIK, {
-    once: true
-  });
+  document.addEventListener(
+    "DOMContentLoaded",
+    initialiseASWIK,
+    { once: true }
+  );
 } else {
   initialiseASWIK();
 }
