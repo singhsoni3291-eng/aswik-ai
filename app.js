@@ -1,110 +1,105 @@
+
 "use strict";
 
 /*
 =========================================================
- ASWIK AI — SMART BRAIN ENGINE 5.0
+ ASWIK AI — SMART BRAIN ENGINE 5.1
  Developer: Aswik Singh
 
- Features:
- - Cloudflare Workers AI connection
- - Automatic language detection
+ - Original JARVIS chat bubble structure restored
+ - Cloudflare Workers AI
  - English, Hindi and Hinglish support
- - SearXNG-powered web search through the Worker
- - Source links in answers
- - Conversation history and follow-up questions
- - Instant date and time
- - Simple arithmetic
- - Safe text rendering
+ - Web search through Cloudflare Worker
+ - Conversation history
+ - Search form and quick buttons
+ - Live India clock
+ - About Developer dialog
 =========================================================
 */
 
 const ASWIK = {
   name: "ASWIK AI",
   developer: "Aswik Singh",
-  version: "5.0",
-
-  workerURL:
-    "https://ancient-pond-adc4.singhsoni3291.workers.dev",
-
+  version: "5.1",
+  endpoint: "https://ancient-pond-adc4.singhsoni3291.workers.dev",
   maxHistory: 20,
-  requestTimeout: 35000
+  timeout: 35000
 };
 
-const chat = document.querySelector("#chat");
-const input = document.querySelector("#messageInput");
-const sendButton = document.querySelector("#sendBtn");
+const $ = selector => document.querySelector(selector);
 
-let conversation = [];
-let isThinking = false;
+const chat = $("#chat");
+const input = $("#messageInput");
+const sendBtn = $("#sendBtn");
+
+let history = [];
+let busy = false;
 
 /* ---------------- LANGUAGE DETECTION ---------------- */
 
 function detectLanguage(text) {
-  const value = String(text || "").toLowerCase();
+  const q = String(text || "").toLowerCase();
 
-  // Hindi written in Devanagari
-  if (/[\u0900-\u097F]/.test(value)) {
+  if (/[\u0900-\u097F]/.test(q)) {
     return "Hindi";
   }
 
-  // Common Hindi words typed using English letters
-  const hinglishWords = [
-    "kya", "kaise", "kaisa", "kyun", "kyu",
-    "hai", "hain", "ho", "tha", "thi",
-    "mera", "meri", "mere", "aap", "tum",
-    "mujhe", "batao", "samjhao", "samjha",
-    "karna", "karo", "kaun", "kab", "kahan",
-    "accha", "achha", "nahi", "nahin",
-    "haan", "han", "bhai", "yaar",
-    "kitna", "kitne", "kitni", "iska",
-    "uska", "kyunki", "matlab", "mein",
-    "me", "aur", "lekin", "wala", "wali"
+  const hindiWords = [
+    "kya", "kaise", "kyun", "kyu", "hai", "hain",
+    "ho", "tha", "thi", "mera", "meri", "mere",
+    "aap", "tum", "mujhe", "batao", "samjhao",
+    "samjha", "karna", "karo", "kaun", "kab",
+    "kahan", "nahi", "nahin", "haan", "achha",
+    "accha", "kitna", "kitne", "kitni", "iska",
+    "uska", "kyunki", "matlab", "mein", "aur",
+    "lekin", "bhai", "yaar"
   ];
 
-  const words = value.match(/[a-z]+/g) || [];
+  const words = q.match(/[a-z]+/g) || [];
   const matches = words.filter(word =>
-    hinglishWords.includes(word)
+    hindiWords.includes(word)
   ).length;
 
   if (matches >= 2 || (matches >= 1 && words.length <= 5)) {
     return "Hinglish";
   }
 
-  // Allow the AI to identify other languages itself
-  return "Auto";
+  // English is the default for English-script questions.
+  return "English";
 }
 
-/* ---------------- CHAT DISPLAY ---------------- */
+/* ---------------- ORIGINAL CHAT BUBBLES ---------------- */
 
-function addMessage(role, text, sources = []) {
-  if (!chat) return;
+function addMessage(text, who = "assistant", sources = []) {
+  if (!chat) return null;
 
-  const wrapper = document.createElement("div");
-  wrapper.className =
-    role === "user" ? "message user-message" : "message assistant-message";
+  const row = document.createElement("div");
+  row.className = `message ${who}`;
 
-  const label = document.createElement("strong");
-  label.className = "message-sender";
-  label.textContent = role === "user" ? "YOU" : "A — ASWIK AI";
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  avatar.textContent = who === "user" ? "Y" : "A";
 
-  const body = document.createElement("div");
-  body.className = "message-text";
-  body.textContent = text;
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
 
-  wrapper.appendChild(label);
-  wrapper.appendChild(body);
+  const heading = document.createElement("strong");
+  heading.textContent = who === "user" ? "YOU" : "ASWIK AI";
 
-  if (role === "assistant" && Array.isArray(sources) && sources.length) {
-    const sourceBox = document.createElement("div");
-    sourceBox.className = "message-sources";
+  const paragraph = document.createElement("p");
+  paragraph.textContent = String(text);
 
-    const heading = document.createElement("strong");
-    heading.textContent = "Sources";
-    sourceBox.appendChild(heading);
+  bubble.appendChild(heading);
+  bubble.appendChild(paragraph);
+
+  // Display real source links when the Worker supplies them.
+  if (who === "assistant" && Array.isArray(sources) && sources.length) {
+    const sourceHeading = document.createElement("strong");
+    sourceHeading.textContent = "Sources";
+    sourceHeading.className = "source-heading";
+    bubble.appendChild(sourceHeading);
 
     sources.forEach(source => {
-      if (!source || !source.url) return;
-
       try {
         const url = new URL(source.url);
 
@@ -115,88 +110,139 @@ function addMessage(role, text, sources = []) {
         link.target = "_blank";
         link.rel = "noopener noreferrer";
         link.textContent = source.title || url.hostname;
+        link.className = "source-link";
 
-        sourceBox.appendChild(link);
+        bubble.appendChild(link);
       } catch {
-        // Ignore invalid source URLs
+        // Ignore invalid source links.
       }
     });
-
-    if (sourceBox.querySelectorAll("a").length) {
-      wrapper.appendChild(sourceBox);
-    }
   }
 
-  chat.appendChild(wrapper);
-  chat.scrollTop = chat.scrollHeight;
+  row.appendChild(avatar);
+  row.appendChild(bubble);
+
+  chat.appendChild(row);
+
+  chat.scrollTo({
+    top: chat.scrollHeight,
+    behavior: "smooth"
+  });
+
+  return paragraph;
 }
+
+/* ---------------- THINKING INDICATOR ---------------- */
 
 function showThinking() {
   removeThinking();
 
-  const element = document.createElement("div");
-  element.id = "aswik-thinking";
-  element.className = "message assistant-message";
-  element.textContent = "⚡ ASWIK is thinking...";
-  chat?.appendChild(element);
+  const row = document.createElement("div");
+  row.className = "message assistant typing-message";
+  row.id = "aswikThinking";
+
+  const avatar = document.createElement("div");
+  avatar.className = "avatar";
+  avatar.textContent = "A";
+
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+
+  const heading = document.createElement("strong");
+  heading.textContent = "ASWIK AI";
+
+  const paragraph = document.createElement("p");
+  paragraph.textContent = "⚡ ASWIK is thinking...";
+
+  bubble.append(heading, paragraph);
+  row.append(avatar, bubble);
+
+  chat?.appendChild(row);
 
   if (chat) chat.scrollTop = chat.scrollHeight;
 }
 
 function removeThinking() {
-  document.querySelector("#aswik-thinking")?.remove();
+  $("#aswikThinking")?.remove();
 }
 
-/* ---------------- LOCAL QUICK ANSWERS ---------------- */
+/* ---------------- LOCAL ANSWERS ---------------- */
 
-function getLocalAnswer(question) {
+function instantAnswer(question) {
   const q = question.trim().toLowerCase();
 
-  if (
-    q === "who made you?" ||
-    q === "who created you?" ||
-    q === "who is your developer?" ||
-    q === "who developed you?"
-  ) {
+  const identityQuestions = [
+    "who made you",
+    "who created you",
+    "who is your developer",
+    "who developed you"
+  ];
+
+  if (identityQuestions.some(item => q.includes(item))) {
     return "I am ASWIK AI, a personal AI assistant created by Aswik Singh.";
   }
 
   if (
-    q === "what time is it?" ||
+    q === "what time is it" ||
     q === "current time" ||
-    q === "what is the date today?" ||
-    q === "today's date"
+    q === "today's date" ||
+    q === "what is today's date"
   ) {
-    return `Current date and time: ${new Date().toLocaleString(
-      "en-IN",
-      { timeZone: "Asia/Kolkata" }
-    )} (IST).`;
+    return "Current date and time: " +
+      new Date().toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata"
+      }) + " (IST).";
   }
 
   return null;
 }
 
-/* ---------------- WORKER CONNECTION ---------------- */
+/* ---------------- CLOCK ---------------- */
 
-async function askASWIK(question) {
+function updateClock() {
+  const clock = $("#clock");
+  if (!clock) return;
+
+  const now = new Date();
+
+  clock.textContent = now.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true
+  });
+}
+
+updateClock();
+setInterval(updateClock, 1000);
+
+/* ---------------- AI REQUEST ---------------- */
+
+async function askBrain(question) {
   const language = detectLanguage(question);
 
- const history = conversation
-  .slice(0, -1)
-  .slice(-ASWIK.maxHistory)
+  // Exclude the current question, which is already in history.
+  const previousHistory = history
+    .slice(0, -1)
+    .slice(-ASWIK.maxHistory)
     .map(item => ({
       role: item.role,
       content: item.content
     }));
 
   const controller = new AbortController();
-  const timeout = setTimeout(
+  const timer = setTimeout(
     () => controller.abort(),
-    ASWIK.requestTimeout
+    ASWIK.timeout
   );
 
   try {
-    const response = await fetch(ASWIK.workerURL, {
+    const response = await fetch(ASWIK.endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -204,7 +250,7 @@ async function askASWIK(question) {
       body: JSON.stringify({
         question,
         language,
-        history
+        history: previousHistory
       }),
       signal: controller.signal
     });
@@ -212,7 +258,7 @@ async function askASWIK(question) {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || `Server error: ${response.status}`);
+      throw new Error(data.error || `HTTP ${response.status}`);
     }
 
     if (!data.answer) {
@@ -222,68 +268,80 @@ async function askASWIK(question) {
     return {
       answer: data.answer,
       sources: Array.isArray(data.sources) ? data.sources : [],
-      searched: Boolean(data.searched)
+      searched: Boolean(data.searched),
+      searchError: data.searchError || null
     };
 
   } finally {
-    clearTimeout(timeout);
+    clearTimeout(timer);
   }
 }
 
 /* ---------------- SEND MESSAGE ---------------- */
 
-async function sendMessage() {
-  if (!input || isThinking) return;
+async function sendMessage(text = null) {
+  if (busy) return;
 
-  const question = input.value.trim();
+  const question = String(text ?? input?.value ?? "").trim();
   if (!question) return;
 
-  input.value = "";
-  isThinking = true;
+  if (input) input.value = "";
 
-  addMessage("user", question);
+  busy = true;
 
-  conversation.push({
+  addMessage(question, "user");
+
+  history.push({
     role: "user",
     content: question
   });
 
-  const localAnswer = getLocalAnswer(question);
+  const instant = instantAnswer(question);
 
-  if (localAnswer) {
-    addMessage("assistant", localAnswer);
+  if (instant) {
+    addMessage(instant, "assistant");
 
-    conversation.push({
+    history.push({
       role: "assistant",
-      content: localAnswer
+      content: instant
     });
 
-    conversation = conversation.slice(-ASWIK.maxHistory);
-    isThinking = false;
+    history = history.slice(-ASWIK.maxHistory);
+    busy = false;
     return;
   }
 
   showThinking();
 
   try {
-    const result = await askASWIK(question);
+    const result = await askBrain(question);
 
     removeThinking();
-    addMessage("assistant", result.answer, result.sources);
 
-    let historyAnswer = result.answer;
+    addMessage(
+      result.answer,
+      "assistant",
+      result.sources
+    );
+
+    let savedAnswer = result.answer;
 
     if (result.sources.length) {
-      historyAnswer += "\nSources: " +
-        result.sources.map(source => source.title).join("; ");
+      savedAnswer += "\nSources: " +
+        result.sources.map(s => s.title).join("; ");
     }
 
-    conversation.push({
+    history.push({
       role: "assistant",
-      content: historyAnswer
+      content: savedAnswer
     });
 
-    conversation = conversation.slice(-ASWIK.maxHistory);
+    // Preserve a compact conversation context.
+    history = history.slice(-ASWIK.maxHistory);
+
+    if (result.searchError) {
+      console.warn("ASWIK search diagnostic:", result.searchError);
+    }
 
   } catch (error) {
     removeThinking();
@@ -291,42 +349,92 @@ async function sendMessage() {
     let message = "I couldn't connect to my AI brain. Please try again.";
 
     if (error.name === "AbortError") {
-      message = "The request took too long. Please try again.";
+      message = "The request timed out. Please try again.";
     } else if (error.message) {
-      message += "\nDetails: " + error.message;
+      message += "\n" + error.message;
     }
 
-    addMessage("assistant", message);
+    addMessage(message, "assistant");
 
-    conversation.push({
+    history.push({
       role: "assistant",
       content: message
     });
 
+    history = history.slice(-ASWIK.maxHistory);
+
+    console.error("ASWIK AI error:", error);
+
   } finally {
-    isThinking = false;
-    input.focus();
+    removeThinking();
+    busy = false;
+    input?.focus();
   }
 }
 
-/* ---------------- EVENT LISTENERS ---------------- */
+/* ---------------- SEND BUTTON ---------------- */
 
-if (!chat || !input || !sendButton) {
-  console.error(
-    "ASWIK AI: Required HTML elements not found. " +
-    "Expected #chat, #messageInput and #sendBtn."
+sendBtn?.addEventListener("click", () => sendMessage());
+
+input?.addEventListener("keydown", event => {
+  if (event.key === "Enter" && !event.shiftKey) {
+    event.preventDefault();
+    sendMessage();
+  }
+});
+
+/* ---------------- SEARCH FORM ---------------- */
+
+$("#searchForm")?.addEventListener("submit", event => {
+  event.preventDefault();
+
+  const searchInput = $("#searchInput");
+  const query = searchInput?.value.trim();
+
+  if (!query) return;
+
+  window.open(
+    "https://www.google.com/search?q=" + encodeURIComponent(query),
+    "_blank",
+    "noopener,noreferrer"
   );
-} else {
-  sendButton.addEventListener("click", sendMessage);
 
-  input.addEventListener("keydown", event => {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      sendMessage();
-    }
+  searchInput.value = "";
+});
+
+/* ---------------- QUICK QUESTION BUTTONS ---------------- */
+
+document.querySelectorAll("[data-query]").forEach(button => {
+  button.addEventListener("click", () => {
+    const question = button.getAttribute("data-query");
+    if (question) sendMessage(question);
   });
+});
 
-  console.info(
-    `ASWIK AI ${ASWIK.version} initialized — Developed by ${ASWIK.developer}.`
-  );
-}
+/* ---------------- ABOUT DEVELOPER ---------------- */
+
+$("#aboutBtn")?.addEventListener("click", () => {
+  const dialog = $("#aboutDialog");
+
+  if (dialog?.showModal) {
+    dialog.showModal();
+  } else if (dialog) {
+    dialog.setAttribute("open", "");
+  }
+});
+
+$("#closeAbout")?.addEventListener("click", () => {
+  const dialog = $("#aboutDialog");
+
+  if (dialog?.close) {
+    dialog.close();
+  } else {
+    dialog?.removeAttribute("open");
+  }
+});
+
+/* ---------------- STARTUP ---------------- */
+
+console.log(
+  `${ASWIK.name} Brain ${ASWIK.version} — Developer: ${ASWIK.developer}`
+);
