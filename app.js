@@ -3,24 +3,31 @@
 
 /*
 =========================================================
- ASWIK AI — SMART BRAIN ENGINE 5.1
+ ASWIK AI — BRAIN INTERFACE 5.2
  Developer: Aswik Singh
 
- - Original JARVIS chat bubble structure restored
+ STARTUP:
+ - Cinematic multilingual greeting screen
+ - Black background and cyan transitions
+
+ CHAT:
+ - WhatsApp-inspired opposite-side bubbles
+ - User messages on RIGHT
+ - ASWIK AI messages on LEFT
+ - Thinking animation
+ - Source links
+
+ BRAIN:
  - Cloudflare Workers AI
  - English, Hindi and Hinglish support
- - Web search through Cloudflare Worker
  - Conversation history
- - Search form and quick buttons
- - Live India clock
- - About Developer dialog
 =========================================================
 */
 
 const ASWIK = {
   name: "ASWIK AI",
   developer: "Aswik Singh",
-  version: "5.1",
+  version: "5.2",
   endpoint: "https://ancient-pond-adc4.singhsoni3291.workers.dev",
   maxHistory: 20,
   timeout: 35000
@@ -35,7 +42,301 @@ const sendBtn = $("#sendBtn");
 let history = [];
 let busy = false;
 
-/* ---------------- LANGUAGE DETECTION ---------------- */
+/* =====================================================
+   1. INJECT INTERFACE STYLES
+===================================================== */
+
+function installASWIKStyles() {
+  if ($("#aswik-v52-styles")) return;
+
+  const style = document.createElement("style");
+  style.id = "aswik-v52-styles";
+
+  style.textContent = `
+    /* WHATSAPP-STYLE CHAT ALIGNMENT */
+
+    #chat {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 14px !important;
+      overflow-y: auto !important;
+      scroll-behavior: smooth;
+    }
+
+    #chat .message {
+      display: flex !important;
+      align-items: flex-end !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      gap: 8px !important;
+      box-sizing: border-box !important;
+    }
+
+    /* USER ON RIGHT */
+
+    #chat .message.user {
+      flex-direction: row-reverse !important;
+      justify-content: flex-start !important;
+      margin-left: auto !important;
+    }
+
+    #chat .message.user .bubble {
+      margin-left: auto !important;
+      margin-right: 0 !important;
+      background: #075e54 !important;
+      color: #ffffff !important;
+      border-radius: 16px 16px 3px 16px !important;
+    }
+
+    #chat .message.user .avatar {
+      display: none !important;
+    }
+
+    /* ASWIK ON LEFT */
+
+    #chat .message.assistant {
+      flex-direction: row !important;
+      justify-content: flex-start !important;
+    }
+
+    #chat .message.assistant .bubble {
+      margin-right: auto !important;
+      margin-left: 0 !important;
+      background: #172b32 !important;
+      color: #ffffff !important;
+      border-radius: 16px 16px 16px 3px !important;
+    }
+
+    /* COMMON BUBBLE */
+
+    #chat .message .bubble {
+      width: fit-content !important;
+      max-width: min(78%, 620px) !important;
+      padding: 11px 14px !important;
+      overflow-wrap: anywhere !important;
+      box-sizing: border-box !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,.16);
+    }
+
+    #chat .message .bubble strong {
+      display: block;
+      font-size: 11px;
+      margin-bottom: 5px;
+      opacity: .8;
+      letter-spacing: .5px;
+    }
+
+    #chat .message .bubble p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    #chat .message .avatar {
+      flex: 0 0 30px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #073c49;
+      color: #7cecff;
+      font-weight: bold;
+      font-size: 13px;
+    }
+
+    #chat .message.assistant .bubble {
+      border: 1px solid rgba(0, 220, 255, .12);
+    }
+
+    #chat .message.user .bubble {
+      border: 1px solid rgba(255,255,255,.06);
+    }
+
+    #chat .source-heading {
+      margin-top: 12px;
+      color: #7cecff;
+    }
+
+    #chat .source-link {
+      display: block;
+      color: #83eaff;
+      font-size: 12px;
+      margin-top: 6px;
+      text-decoration: underline;
+      overflow-wrap: anywhere;
+    }
+
+    /* THINKING ANIMATION */
+
+    #chat .typing-message .bubble p {
+      color: #7cecff;
+      animation: aswikPulse 1.2s infinite;
+    }
+
+    @keyframes aswikPulse {
+      0%, 100% { opacity: .45; }
+      50% { opacity: 1; }
+    }
+
+    /* STARTUP SCREEN */
+
+    #aswikIntro {
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      background: #000;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      opacity: 1;
+      transition: opacity 1s ease, visibility 1s ease;
+    }
+
+    #aswikIntro.aswik-exit {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    #aswikIntro .intro-brand {
+      position: absolute;
+      top: 35px;
+      font-size: 13px;
+      font-weight: bold;
+      letter-spacing: 5px;
+      color: #65eaff;
+      opacity: .9;
+    }
+
+    #aswikIntro .intro-greetings {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      text-align: center;
+    }
+
+    #aswikIntro .intro-greeting {
+      font-size: clamp(24px, 7vw, 42px);
+      font-weight: 400;
+      opacity: 0;
+      transform: translateY(15px);
+      animation: aswikGreeting 5s ease forwards;
+      text-shadow: 0 0 18px rgba(0, 220, 255, .22);
+    }
+
+    #aswikIntro .intro-greeting:nth-child(1) { animation-delay: .3s; }
+    #aswikIntro .intro-greeting:nth-child(2) { animation-delay: .7s; }
+    #aswikIntro .intro-greeting:nth-child(3) { animation-delay: 1.1s; }
+    #aswikIntro .intro-greeting:nth-child(4) { animation-delay: 1.5s; }
+    #aswikIntro .intro-greeting:nth-child(5) { animation-delay: 1.9s; }
+    #aswikIntro .intro-greeting:nth-child(6) { animation-delay: 2.3s; }
+    #aswikIntro .intro-greeting:nth-child(7) { animation-delay: 2.7s; }
+
+    @keyframes aswikGreeting {
+      0% { opacity: 0; transform: translateY(15px); }
+      15%, 65% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-12px); }
+    }
+
+    #aswikIntro .intro-awakening {
+      position: absolute;
+      bottom: 100px;
+      color: #73eaff;
+      font-size: 12px;
+      letter-spacing: 3px;
+      opacity: 0;
+      animation: aswikAwaken 2s 3.3s forwards;
+      text-align: center;
+    }
+
+    #aswikIntro .intro-credit {
+      position: absolute;
+      bottom: 35px;
+      color: #6c8b94;
+      font-size: 10px;
+      letter-spacing: 2px;
+    }
+
+    @keyframes aswikAwaken {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      #aswikIntro *,
+      #chat * {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+      }
+    }
+  `;
+
+  document.head.appendChild(style);
+}
+
+installASWIKStyles();
+
+/* =====================================================
+   2. CINEMATIC STARTUP
+===================================================== */
+
+function startASWIKIntro() {
+  if ($("#aswikIntro")) return;
+
+  const intro = document.createElement("div");
+  intro.id = "aswikIntro";
+
+  const greetings = [
+    "Hello.",
+    "नमस्ते।",
+    "Hola.",
+    "Bonjour.",
+    "こんにちは。",
+    "مرحبا。",
+    "ਸਤ ਸ੍ਰੀ ਅਕਾਲ।"
+  ];
+
+  intro.innerHTML = `
+    <div class="intro-brand">ASWIK AI</div>
+
+    <div class="intro-greetings">
+      ${greetings.map(text =>
+        `<div class="intro-greeting">${text}</div>`
+      ).join("")}
+    </div>
+
+    <div class="intro-awakening">
+      A NEW INTELLIGENCE AWAKENS
+    </div>
+
+    <div class="intro-credit">
+      CREATED BY ASWIK SINGH
+    </div>
+  `;
+
+  document.body.appendChild(intro);
+
+  setTimeout(() => {
+    intro.classList.add("aswik-exit");
+
+    setTimeout(() => intro.remove(), 1100);
+  }, 6500);
+}
+
+startASWIKIntro();
+
+/* =====================================================
+   3. LANGUAGE DETECTION
+===================================================== */
 
 function detectLanguage(text) {
   const q = String(text || "").toLowerCase();
@@ -64,14 +365,18 @@ function detectLanguage(text) {
     return "Hinglish";
   }
 
-  // English is the default for English-script questions.
   return "English";
 }
 
-/* ---------------- ORIGINAL CHAT BUBBLES ---------------- */
+/* =====================================================
+   4. MESSAGE BUBBLES
+===================================================== */
 
 function addMessage(text, who = "assistant", sources = []) {
-  if (!chat) return null;
+  if (!chat) {
+    console.error("ASWIK: #chat element not found.");
+    return;
+  }
 
   const row = document.createElement("div");
   row.className = `message ${who}`;
@@ -89,57 +394,50 @@ function addMessage(text, who = "assistant", sources = []) {
   const paragraph = document.createElement("p");
   paragraph.textContent = String(text);
 
-  bubble.appendChild(heading);
-  bubble.appendChild(paragraph);
+  bubble.append(heading, paragraph);
 
-  // Display real source links when the Worker supplies them.
   if (who === "assistant" && Array.isArray(sources) && sources.length) {
     const sourceHeading = document.createElement("strong");
-    sourceHeading.textContent = "Sources";
     sourceHeading.className = "source-heading";
+    sourceHeading.textContent = "SOURCES";
     bubble.appendChild(sourceHeading);
 
     sources.forEach(source => {
       try {
         const url = new URL(source.url);
 
-        if (!["https:", "http:"].includes(url.protocol)) return;
+        if (!["http:", "https:"].includes(url.protocol)) return;
 
         const link = document.createElement("a");
+        link.className = "source-link";
         link.href = url.href;
         link.target = "_blank";
         link.rel = "noopener noreferrer";
         link.textContent = source.title || url.hostname;
-        link.className = "source-link";
 
         bubble.appendChild(link);
       } catch {
-        // Ignore invalid source links.
+        // Invalid URLs are ignored.
       }
     });
   }
 
-  row.appendChild(avatar);
-  row.appendChild(bubble);
-
+  row.append(avatar, bubble);
   chat.appendChild(row);
 
-  chat.scrollTo({
-    top: chat.scrollHeight,
-    behavior: "smooth"
-  });
-
-  return paragraph;
+  chat.scrollTop = chat.scrollHeight;
 }
 
-/* ---------------- THINKING INDICATOR ---------------- */
+/* =====================================================
+   5. THINKING INDICATOR
+===================================================== */
 
 function showThinking() {
   removeThinking();
 
   const row = document.createElement("div");
-  row.className = "message assistant typing-message";
   row.id = "aswikThinking";
+  row.className = "message assistant typing-message";
 
   const avatar = document.createElement("div");
   avatar.className = "avatar";
@@ -166,7 +464,9 @@ function removeThinking() {
   $("#aswikThinking")?.remove();
 }
 
-/* ---------------- LOCAL ANSWERS ---------------- */
+/* =====================================================
+   6. INSTANT ANSWERS
+===================================================== */
 
 function instantAnswer(question) {
   const q = question.trim().toLowerCase();
@@ -197,36 +497,13 @@ function instantAnswer(question) {
   return null;
 }
 
-/* ---------------- CLOCK ---------------- */
-
-function updateClock() {
-  const clock = $("#clock");
-  if (!clock) return;
-
-  const now = new Date();
-
-  clock.textContent = now.toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true
-  });
-}
-
-updateClock();
-setInterval(updateClock, 1000);
-
-/* ---------------- AI REQUEST ---------------- */
+/* =====================================================
+   7. CLOUD AI CONNECTION
+===================================================== */
 
 async function askBrain(question) {
   const language = detectLanguage(question);
 
-  // Exclude the current question, which is already in history.
   const previousHistory = history
     .slice(0, -1)
     .slice(-ASWIK.maxHistory)
@@ -236,6 +513,7 @@ async function askBrain(question) {
     }));
 
   const controller = new AbortController();
+
   const timer = setTimeout(
     () => controller.abort(),
     ASWIK.timeout
@@ -268,7 +546,6 @@ async function askBrain(question) {
     return {
       answer: data.answer,
       sources: Array.isArray(data.sources) ? data.sources : [],
-      searched: Boolean(data.searched),
       searchError: data.searchError || null
     };
 
@@ -277,12 +554,15 @@ async function askBrain(question) {
   }
 }
 
-/* ---------------- SEND MESSAGE ---------------- */
+/* =====================================================
+   8. SEND MESSAGE
+===================================================== */
 
 async function sendMessage(text = null) {
   if (busy) return;
 
   const question = String(text ?? input?.value ?? "").trim();
+
   if (!question) return;
 
   if (input) input.value = "";
@@ -336,17 +616,17 @@ async function sendMessage(text = null) {
       content: savedAnswer
     });
 
-    // Preserve a compact conversation context.
     history = history.slice(-ASWIK.maxHistory);
 
     if (result.searchError) {
-      console.warn("ASWIK search diagnostic:", result.searchError);
+      console.warn("ASWIK search issue:", result.searchError);
     }
 
   } catch (error) {
     removeThinking();
 
-    let message = "I couldn't connect to my AI brain. Please try again.";
+    let message =
+      "I couldn't connect to my AI brain. Please try again.";
 
     if (error.name === "AbortError") {
       message = "The request timed out. Please try again.";
@@ -363,7 +643,7 @@ async function sendMessage(text = null) {
 
     history = history.slice(-ASWIK.maxHistory);
 
-    console.error("ASWIK AI error:", error);
+    console.error("ASWIK error:", error);
 
   } finally {
     removeThinking();
@@ -372,9 +652,13 @@ async function sendMessage(text = null) {
   }
 }
 
-/* ---------------- SEND BUTTON ---------------- */
+/* =====================================================
+   9. EVENT LISTENERS
+===================================================== */
 
-sendBtn?.addEventListener("click", () => sendMessage());
+sendBtn?.addEventListener("click", () => {
+  sendMessage();
+});
 
 input?.addEventListener("keydown", event => {
   if (event.key === "Enter" && !event.shiftKey) {
@@ -382,8 +666,6 @@ input?.addEventListener("keydown", event => {
     sendMessage();
   }
 });
-
-/* ---------------- SEARCH FORM ---------------- */
 
 $("#searchForm")?.addEventListener("submit", event => {
   event.preventDefault();
@@ -402,8 +684,6 @@ $("#searchForm")?.addEventListener("submit", event => {
   searchInput.value = "";
 });
 
-/* ---------------- QUICK QUESTION BUTTONS ---------------- */
-
 document.querySelectorAll("[data-query]").forEach(button => {
   button.addEventListener("click", () => {
     const question = button.getAttribute("data-query");
@@ -411,7 +691,9 @@ document.querySelectorAll("[data-query]").forEach(button => {
   });
 });
 
-/* ---------------- ABOUT DEVELOPER ---------------- */
+/* =====================================================
+   10. ABOUT DEVELOPER
+===================================================== */
 
 $("#aboutBtn")?.addEventListener("click", () => {
   const dialog = $("#aboutDialog");
@@ -433,8 +715,10 @@ $("#closeAbout")?.addEventListener("click", () => {
   }
 });
 
-/* ---------------- STARTUP ---------------- */
+/* =====================================================
+   11. STARTUP COMPLETE
+===================================================== */
 
 console.log(
-  `${ASWIK.name} Brain ${ASWIK.version} — Developer: ${ASWIK.developer}`
+  `${ASWIK.name} ${ASWIK.version} initialized. Developer: ${ASWIK.developer}`
 );
