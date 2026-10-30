@@ -181,8 +181,9 @@ function getLocalAnswer(question) {
 async function askASWIK(question) {
   const language = detectLanguage(question);
 
-  const history = conversation
-    .slice(-ASWIK.maxHistory)
+ const history = conversation
+  .slice(0, -1)
+  .slice(-ASWIK.maxHistory)
     .map(item => ({
       role: item.role,
       content: item.content
