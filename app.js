@@ -727,46 +727,19 @@ console.log(
 // =================================
 
 (function () {
-  function startASWIKClock() {
-    let clock = document.getElementById("systemClock");
+  const clock = document.getElementById("clock");
+  if (!clock) return;
 
-    // Create the clock automatically if it doesn't exist
-    if (!clock) {
-      const status = [...document.querySelectorAll("div, span, p")]
-        .find(el =>
-          el.children.length === 0 &&
-          el.textContent.trim() === "SYSTEM ONLINE"
-        );
-
-      if (status) {
-        clock = document.createElement("span");
-        clock.id = "systemClock";
-        clock.style.marginLeft = "10px";
-        clock.style.color = "#00eaff";
-        clock.style.fontVariantNumeric = "tabular-nums";
-        status.appendChild(clock);
-      }
-    }
-
-    if (!clock) return;
-
-    function updateClock() {
-      clock.textContent = new Intl.DateTimeFormat("en-IN", {
-        timeZone: "Asia/Kolkata",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true
-      }).format(new Date());
-    }
-
-    updateClock();
-    setInterval(updateClock, 1000);
+  function updateClock() {
+    clock.textContent = new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true
+    }).format(new Date());
   }
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", startASWIKClock);
-  } else {
-    startASWIKClock();
-  }
+  updateClock();
+  setInterval(updateClock, 1000);
 })();
